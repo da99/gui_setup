@@ -22,6 +22,11 @@ case $action in
       bluez bluez-libs bluez-utils    \
       bluez-firmware blueman bluez    \
       vlc libav                       \
+      pekwm conky xdbinfo
+    ;;
+
+  "wh")
+    xdbyinfo | grep dimensions
     ;;
 
   *)
