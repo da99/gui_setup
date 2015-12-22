@@ -10,25 +10,23 @@ fi
 set -u -e -o pipefail
 
 desktops="/usr/share/applications/ $HOME/.local/share/applications"
+apps="/apps/*/bin/ /progs/bin/ /progs/*/bin"
 files=""
 pattern=$(echo "$orig" | sed 's/[[:blank:]]//g; s/\(.\)/\1{1}[^\/]*/g')
-files="$(find $desktops -type f -iname "${orig}*.desktop" | head -n 10)"
 
-if [[ -n "$first" ]]; then # === find in path
-  set +e +o pipefail +x
-  files="$files\n$(find /apps/*/bin/ /progs/bin/ /progs/*/bin -ignore_readdir_race -type f -iname "*${first}*" 2>/dev/null | head -n 20 )"
-  set -e -o pipefail +x
-fi
-
-
-files="$files\n$(find $desktops -type f -regextype posix-extended -regex "^.*/[^/]*$pattern\.desktop$" | head -n 10 | sort)"
+counter=1
+while read -r FILE
+do
+  [ "$counter" -ge 10 ] && break
+  files="$files\n$FILE"
+done < <(find $desktops $apps -ignore_readdir_race -type f -iname "${first}*" 2>/dev/null)
 
 while read -r FILE; do
   case $FILE in
     *.desktop)
       echo [$FILE]
       name=$(basename "$FILE" .desktop)
-      icon=$(grep --extended-regexp "^Icon=" "$FILE" || echo "" | head -n 1 | sed "s/^Icon=//")
+      icon=$(grep --extended-regexp "^Icon=" "$FILE" | head -n 1 | sed "s/^Icon=//")
       echo [$name]
       echo "command=gtk-launch \"$name\""
       echo "icon=$icon"
