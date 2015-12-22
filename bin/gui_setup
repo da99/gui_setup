@@ -4,6 +4,7 @@
 set -u -e -o pipefail
 
 action=$1
+temp="$(dirname $(dirname $(realpath $0)))/tmp"
 shift
 
 case $action in
@@ -11,7 +12,40 @@ case $action in
     bash_setup print_help $0
     ;;
 
+  "window")
+    # === window
+    window=$temp/window
+    if [[ ! -d $temp ]]; then
+      mkdir -p $temp
+    fi
+    touch $window
+    last="$(cat $window)"
+    case $last in
+      "1")
+        wmctrl -r :ACTIVE: -e 0,10,10,950,940
+        ;;
+      "2") # top right big
+        wmctrl -r :ACTIVE: -e 0,970,10,950,500
+        ;;
+      "3") # bottom right big
+        wmctrl -r :ACTIVE: -e 0,970,540,950,520
+        ;;
+      "4") # top right medium
+        wmctrl -r :ACTIVE: -e 0,1250,10,660,470
+        ;;
+      "5") # bottom right medium
+        wmctrl -r :ACTIVE: -e 0,1250,510,660,480
+        ;;
+      *)
+        wmctrl -r :ACTIVE: -e 0,10,10,1900,940
+        last="0"
+        ;;
+    esac
+    echo $(($last + 1)) > $window
+    ;;
+
   "install")
+    # === install
     sudo pacmatic -S                  \
       unzip faenza-icon-theme         \
       plank plank-extras              \
@@ -22,7 +56,9 @@ case $action in
       bluez bluez-libs bluez-utils    \
       bluez-firmware blueman bluez    \
       vlc libav                       \
-      pekwm conky xdbinfo
+      xorg-xrdb xorg-xmodmap          \
+      pekwm conky xdbinfo volumeicon  \
+      stalonetray
     ;;
 
   "wh")
