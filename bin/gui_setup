@@ -12,8 +12,137 @@ case $action in
     bash_setup print_help $0
     ;;
 
+  "watch")
+    # === watch
+    orig_dir="/apps/gui_setup/tmp"
+    mkdir -p $orig_dir
+    dir="$(mktemp -d)/gui_setup"
+    cp -a $orig_dir/. $dir/
+
+    echo -n "$dir" > "$orig_dir/temp_dir"
+
+    files="$(find                         \
+      /apps/*/bin/                       \
+      /progs/bin/                        \
+      /progs/*/bin                       \
+      -ignore_readdir_race -maxdepth 1   \
+      -type f)"
+    file_list="$dir/files"
+    echo -e "$files"    > $file_list
+
+    desktops="$(find /home/da/.local/share/applications /usr/share/applications/ -ignore_readdir_race -maxdepth 1 \
+      -type f -iname "*.desktop" )"
+    desktop_list="$dir/desktops"
+    echo -e "$desktops" > $desktop_list
+
+    echo "=== Caching icon files..."
+    while read -r LINE
+    do
+      cache="$dir/$(basename $LINE .desktop).png"
+      if [[ ! -f "$cache" ]]; then
+        file="$($0 desktop_to_icon 24 $LINE)"
+        if [[ -z "$file" ]]; then
+          echo "=== Skipping $LINE (no icon file)"
+        else
+          echo "=== copying $file -> $cache"
+          cp "$file" "$cache"
+        fi
+      fi
+    done < <(echo -e "$desktops")
+
+    while true; do
+      echo "=== Sleeping. On wake: cache window icons..."
+      sleep 1
+      while read -r id; do
+        $0 window_id_to_icon $id
+      done < <( wmctrl -l | grep --extended-regexp "^[0-9a-z]+  [0-9]" | cut -d' ' -f1 )
+    done
+
+    echo "=== copying TEMP/RAM dir to $orig_dir"
+    cp -a $dir/. $orig_dir/
+    ;;
+
+  "desktop_to_icon")
+    size="$1"
+    file="$2"
+    raw_icon="$(sed -n 's/.*Icon=\(.*\)\n*/\1/p' $file)"
+    icon="${raw_icon//.png/}"
+    if [[ -n "$icon" ]]; then
+      $0 freedesktop_icon $size $icon
+    fi
+    ;;
+
+  "freedesktop_icon")
+    size="$1"; shift
+    name="$1"; shift
+
+    theme="$(sed -n 's/.*gtk-icon-theme-name="\(.\+\)".*/\1/p' $HOME/.gtkrc-2.0 || :)"
+    default_theme="$(gsettings get org.gnome.desktop.interface icon-theme || :)"
+    default_theme="${default_theme//\'/}"
+
+    dirs="
+      $HOME/.local/share/icons/        \
+      /usr/share/icons/$theme/         \
+      /usr/share/icons/$default_theme/ \
+      /usr/share/icons/                \
+    "
+    file="$(find $dirs -type f -wholename "*${size}*${name}.png" | head -n 1)"
+
+    if [[ -z "$file" ]]; then
+      file="$(find $dirs -type f -wholename "*/${name}.png" | head -n 1)"
+    fi
+
+    echo $file
+    ;;
+
+  "window_list")
+    # === $ window_list
+    # ===   Returns: "id title ..."
+
+    # === Filter out non-visible windows by insure second column
+    #     does not start w/minus sign, as in "-1"
+    while read -r LINE; do
+      icon=$($0 window_id_to_icon $(echo $LINE | cut -d' ' -f1))
+      echo $icon $(echo $LINE | cut -d' ' -f1) $(echo $LINE | cut -d' ' -f4-)
+    done < <(wmctrl -l | grep --extended-regexp "^[0-9a-z]+  [0-9]")
+    ;;
+
+  "window_id_to_icon")
+    # === $ window_id_to_icon 0x0343..
+    # === $ window_id_to_icon 0x343..
+    # === Creates icon (if it doesn't exist) and returns path to icon.
+    RAW_ID="$1"
+    shift
+    tree="$(xwininfo -root -children -tree)"
+    id="${RAW_ID/0x0/0x}"
+    props="$(echo "$tree" | grep "$id " | head -n 1)"
+    bin="$([[ "$props" =~ ':'\ \(\"(.+)\"\ \" ]] && echo ${BASH_REMATCH[1]})"
+    icon="/apps/gui_setup/tmp/${bin// /_}.png"
+    if [[ ! -f "$icon" ]]; then
+      $0 window_icon! $id $icon || echo "=== error in rendering icon: exit status $? -> $icon" 1>&2
+    fi
+    echo $icon
+    ;;
+
+  "window_icon!")
+    raw_id="$1"
+    shift
+    save_as="$1"
+
+    id="${raw_id/0x0/0x}"
+    xprop -id $id -notype 32c _NET_WM_ICON  | perl -0777 -pe '@_=/\d+/g;
+    printf "P7\nWIDTH %d\nHEIGHT %d\nDEPTH 4\nMAXVAL 255\nTUPLTYPE RGB_ALPHA\nENDHDR\n", splice@_,0,2;
+    $_=pack "N*", @_;
+    s/(.)(...)/$2$1/gs' | pamrgbatopng > $save_as
+    ;;
+
+  "window_title_grep")
+    wmctrl -l | grep -i "$@" | tail -1 | cut -f1 -d' '
+    ;;
+
   "window")
     # === window
+    # move window
     window=$temp/window
     if [[ ! -d $temp ]]; then
       mkdir -p $temp
@@ -58,7 +187,8 @@ case $action in
       vlc libav                       \
       xorg-xrdb xorg-xmodmap          \
       pekwm conky xdbinfo volumeicon  \
-      stalonetray
+      netpbm                          \
+      xdotool xorg-xrdb xorg-xdpyinfo
     ;;
 
   "wh")

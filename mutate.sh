@@ -1,25 +1,25 @@
 #!/bin/bash
+
+
 orig="$@"
 first="$1"
 last=""
+
 shift
 if [[ -n "$@" ]]; then
   last="$@"
 fi
 
+# if [[ -z "$TERM" ]]; then
+  TERM="urxvt"
+# fi
+
 set -u -e -o pipefail
 
-desktops="/usr/share/applications/ $HOME/.local/share/applications"
-apps="/apps/*/bin/ /progs/bin/ /progs/*/bin"
-files=""
-pattern=$(echo "$orig" | sed 's/[[:blank:]]//g; s/\(.\)/\1{1}[^\/]*/g')
+folders="$HOME/.local/share/applications /apps/*/bin/  /usr/share/applications/ /progs/bin/ /progs/*/bin"
+term=$({ which urxvt gnome-terminal $TERM 2>/dev/null || echo "urxvt"; } | tail -n 1)
+# pattern=$(echo "$orig" | sed 's/[[:blank:]]//g; s/\(.\)/\1{1}[^\/]*/g')
 
-counter=1
-while read -r FILE
-do
-  [ "$counter" -ge 10 ] && break
-  files="$files\n$FILE"
-done < <(find $desktops $apps -ignore_readdir_race -type f -iname "${first}*" 2>/dev/null)
 
 while read -r FILE; do
   case $FILE in
@@ -36,13 +36,11 @@ while read -r FILE; do
     *)
       name="$(basename "$FILE")"
       echo [$name]
-      # echo "command=$TERM --command \"$FILE $@\""
-      term=$(which urxvt gnome-terminal $TERM 2>/dev/null | tail -n 1)
       echo "command=$term -x sh -c \"$FILE $last; bash\""
       echo "icon="
       echo "subtext=$term -x sh -c \"$FILE $last; bash\""
       ;;
   esac
-done < <(echo -e "$files" | grep -v --extended-regexp "^[[:blank:]]*$" | uniq | head -n 10)
+done < <(find $folders -ignore_readdir_race -maxdepth 1 -type f -iname "${first}*")
 
 
