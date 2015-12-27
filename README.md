@@ -1,4 +1,8 @@
 
+Logout of Session
+======
+* [https://bbs.archlinux.org/viewtopic.php?id=54069](https://bbs.archlinux.org/viewtopic.php?id=54069)
+
 Conky
 =====
 
@@ -9,6 +13,11 @@ Window Switching
 * [https://github.com/richardgv/skippy-xd](https://github.com/richardgv/skippy-xd)
 * [https://github.com/jotrk/x-choyce](https://github.com/jotrk/x-choyce)
 * [https://code.google.com/p/superswitcher/](https://code.google.com/p/superswitcher/)
+
+Window Propertoes and icons:
+===========
+
+* [http://crunchbang.org/forums/viewtopic.php?id=33673](http://crunchbang.org/forums/viewtopic.php?id=33673)
 
 WMCTRL
 ======

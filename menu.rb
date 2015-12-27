@@ -9,26 +9,31 @@ CMD       = 2
 COLOR     = 3
 ICON      = 4
 SEARCH_STR= 5
+ELEMENT   = 6
 
 @app = Shoes.app do
   begin
     dir=File.read("/apps/gui_setup/tmp/temp_dir").strip
     @windows = `/apps/gui_setup/bin/gui_setup window_list`.strip!.each_line.map { |line|
-        line[/([^\s]+)\s+([^\s]+)\s+(.+)/]
-        icon=$1
-        id=$2
-        title=($3 || '[No title]').strip[0,30]
-        [:window, title, "wmctrl -i -a #{id}", slategray, icon]
+      line.strip!
+      line[/([^\s]+)\s+([^\s]+)\s+(.+)/]
+      icon=$1
+      id=$2
+      title=($3 || '[No title]').strip[0,30]
+      [:window, "window: #{title}", "wmctrl -i -a #{id}", slategray, icon, $3]
     }
 
     @desktops = File.read("#{dir}/desktops").each_line.map { |line|
+      line.strip!
       cmd = "gtk-launch \"#{line}\""
-      [:desktop, line, cmd, gray, nil, File.basename(line, '.desktop')]
+      basename = File.basename(line, '.desktop')
+      [:desktop, "desktop: #{line}", cmd, gray, "#{dir}/#{basename}.png", basename]
     }
 
     @files = File.read("#{dir}/files").each_line.map { |line|
+      line.strip!
       cmd = line
-      [:run, line, cmd, gray, nil, File.basename(line)]
+      [:run, "run: #{line}", cmd, gray, nil, File.basename(line)]
     }
 
     str = ""
@@ -48,11 +53,15 @@ SEARCH_STR= 5
     end
 
     def insert line
+      return line[ELEMENT].show if line[ELEMENT]
+
       @options.append {
-        flow margin: [10, 4, 0, 0]  do
+        line[ELEMENT]= flow margin: [10, 4, 0, 0]  do
           background(line[COLOR])
           icon = line[ICON]
-          image(icon).style(height: 24, width: 24) if icon
+          if icon
+            image(icon).style(height: 24, width: 24)
+          end
           para(line[TITLE])
           para(line[CMD])
         end # === stack
@@ -130,10 +139,12 @@ SEARCH_STR= 5
         @selected = -1
 
         str.strip!
+        @info.replace "#{str} (#{k.inspect})"
+
         pattern = /#{Regexp.escape str}/i
         results = case
                   when str.empty?
-                    @windows
+                    @windows.dup
                   else
                     []
                     .concat(@windows.select { |line| line[SEARCH_STR].match pattern })
@@ -141,18 +152,13 @@ SEARCH_STR= 5
                     .concat(@files.select { |line| line[SEARCH_STR].match pattern })
                   end
 
-        old_stacks = @options.children.dup
-        counter = -1
+        @options.children.map(&:hide)
         results[0,20].each { |line|
           insert line
-          counter += 1
-          old_stacks[counter] && old_stacks[counter].remove
         }
-        old_stacks[counter, old_stacks.size].map(&:remove) if counter < old_stacks.size
 
         select :down
 
-        @info.replace "#{str} (#{k.inspect})"
       end # === keypress
 
     end # == flow
