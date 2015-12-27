@@ -2,6 +2,7 @@
 Logout of Session
 ======
 * [https://bbs.archlinux.org/viewtopic.php?id=54069](https://bbs.archlinux.org/viewtopic.php?id=54069)
+* [https://bbs.archlinux.org/viewtopic.php?id=73944](https://bbs.archlinux.org/viewtopic.php?id=73944)
 
 Conky
 =====
