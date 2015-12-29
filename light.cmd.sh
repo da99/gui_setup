@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
 
 
-files="$(find ~/.local/share/applications/ /usr/share/applications/ -type f -iname '*.desktop')"
-# names=$(echo -e "$files" | xargs -I f basename f .desktop)
-# pair="$(paste <() <() --delimiter)"
-LAST=""
-
-to_cmd () {
-  local full=$1
-  local base=$(basename $full .desktop)
-  echo -n "{OPEN $base | launch $full | OPEN the file using the desktop. }"
+export PATH="/apps/gui_setup/bin:$PATH"
+escape () {
+  val="$@"
+  val="${val//\{/}"
+  echo "${val//\}/}"
 }
 
-echo "" > /tmp/lighthouse.cmd.log
-result="$files"
-last=""
+to_cmd () {
+  name="$(escape $(echo "$@" | cut -d'|' -f1))"
+  icon="$(escape $(echo "$@" | cut -d'|' -f2))"
+  comment="$(escape $(echo "$@" | cut -d'|' -f4-))"
+  exec="$(escape $(echo "$@" | cut -d'|' -f3))"
+  echo -n "{OPEN $name | $exec | "$comment" }"
+}
+
+log="/tmp/lighthouse.cmd.log"
+echo "" > "$log"
+
+
+val=""
 while true; do
-  read -t 0.3 -s VAL && val="$VAL"
-  read -t 0.1 -s VAL && val="$VAL"
-  read -t 0.1 -s VAL && val="$VAL"
+
+  last="$val"
+  while read -t 0.2 -s VAL; do
+    val="$VAL"
+  done
 
   if [[ -z "$val" ]]; then
     echo "{empty! empty | echo nothing }"
@@ -29,13 +37,14 @@ while true; do
     continue
   fi
 
-  last="$val"
-  echo "$val" >> /tmp/lighthouse.cmd.log
+  echo "$val" >> "$log"
+
+
   result=""
-  while read LINE
+  while read -r LINE
   do
-    result="${result}{echo! $(basename $LINE) | echo $val | you put: $val}"
-  done < <(echo "$files" | sed -nr "/$val/p" | head -n 10)
+    result="${result}$(to_cmd $LINE)"
+  done < <(gui_setup select "$val")
   echo "$result"
 
 done

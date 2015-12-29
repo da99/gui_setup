@@ -7,6 +7,7 @@ action=$1
 temp="$(dirname $(dirname $(realpath $0)))/tmp"
 THIS_DIR="$(dirname "$(dirname $0)")"
 THIS_TMP="${THIS_DIR}/tmp"
+DB_FILE="${THIS_TMP}/db.desktop.db"
 shift
 
 case $action in
@@ -16,12 +17,12 @@ case $action in
 
   "desktop_entries")
     # === desktop_entries  # Returns list of .desktop entries
-    desktops="$(find  \
+    find  \
       /home/da/.local/share/applications \
       /usr/share/applications/           \
       -ignore_readdir_race -maxdepth 1   \
       -type f                            \
-      -iname "*.desktop")"
+      -iname "*.desktop"
     ;;
 
   "desktop_entry_to_insert")
@@ -36,7 +37,7 @@ case $action in
 
     id="$(basename $path .desktop)"
     icon_name="$(get "Icon")"
-    icon_path="/unknown/${icon_name}"
+    icon_path="$($0 app_name_to_icon "${icon_name}")"
     try_exec="$(get "TryExec")"
     exec="$(get "Exec" | sed 's/%.//' )"
     terminal="$(get "Terminal")"
@@ -61,20 +62,31 @@ case $action in
 
   "cache_the_machine")
     # === cache_the_machine  # Set up a DB for (.desktop, icon, etc.) lookups.
-    db_file="${THIS_TMP}/db.desktop.db"
-    if [[ ! -f "$db_file" ]]; then
-      # sqlite3 $db_file "create table desktops ( \
-        # id TEXT    PRIMARY KEY,                 \
-        # path       TEXT,                        \
-        # icon_name  TEXT,                        \
-        # icon_path  TEXT,                        \
-        # try_exec   TEXT,                        \
-        # exec       TEXT,                        \
-        # terminal   INT DEFAULT 0,               \
-        # comment    TEXT                         \
-      # );"
-      $0 desktop_entries | xargs -I FILE $0 desktop_entry_to_insert desktops FILE
+    if [[ ! -f "$DB_FILE" ]]; then
+      sqlite3 $DB_FILE "create table desktops ( \
+        id TEXT    PRIMARY KEY,                 \
+        path       TEXT,                        \
+        icon_name  TEXT,                        \
+        icon_path  TEXT,                        \
+        try_exec   TEXT,                        \
+        exec       TEXT,                        \
+        terminal   INT DEFAULT 0,               \
+        comment    TEXT                         \
+      );"
     fi
+    while read -r FILE; do
+      status="0"
+      sqlite3 "$DB_FILE" "$($0 desktop_entry_to_insert desktops $FILE)" || status="$?"
+      if [[ ! "$status" -eq "0" && ! "$status" -eq "19" ]]; then
+        exit "$status"
+      fi
+      echo "=== Inserted: $FILE"
+    done < <($0 desktop_entries)
+    ;;
+
+  "select")
+    # === select partial_or_full_id # returns SQLite3 '|'-delimited rows
+    sqlite3 "$DB_FILE" "SELECT id, icon_path, exec, comment FROM desktops WHERE id LIKE '$1%' LIMIT 10;"
     ;;
 
   "watch")
@@ -124,6 +136,19 @@ case $action in
 
     echo "=== copying TEMP/RAM dir to $orig_dir"
     cp -a $dir/. $orig_dir/
+    ;;
+
+  "app_name_to_icon")
+    name="$1"
+    cd "${THIS_TMP}"
+    if [[ ! -d "${THIS_TMP}/xdg-bash-functions" ]]; then
+      git clone "https://github.com/martynets/xdg-bash-functions" 1>/dev/null
+    fi
+    cd "xdg-bash-functions"
+    set +u +e +o pipefail
+    source ./icon-functions
+    icon_functions_init
+    find_apps_icon $name && echo "$ICON"
     ;;
 
   "desktop_to_icon")
