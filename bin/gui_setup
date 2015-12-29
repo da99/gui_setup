@@ -5,11 +5,76 @@ set -u -e -o pipefail
 
 action=$1
 temp="$(dirname $(dirname $(realpath $0)))/tmp"
+THIS_DIR="$(dirname "$(dirname $0)")"
+THIS_TMP="${THIS_DIR}/tmp"
 shift
 
 case $action in
   help|--help)
     bash_setup print_help $0
+    ;;
+
+  "desktop_entries")
+    # === desktop_entries  # Returns list of .desktop entries
+    desktops="$(find  \
+      /home/da/.local/share/applications \
+      /usr/share/applications/           \
+      -ignore_readdir_race -maxdepth 1   \
+      -type f                            \
+      -iname "*.desktop")"
+    ;;
+
+  "desktop_entry_to_insert")
+    db="$1"
+    shift
+    path="$1"
+
+    get () {
+      raw="$(grep "${1}=" "$path" | cut -d'=' -f2 | head -n 1)"
+      echo "${raw//\'/}"
+    }
+
+    id="$(basename $path .desktop)"
+    icon_name="$(get "Icon")"
+    icon_path="/unknown/${icon_name}"
+    try_exec="$(get "TryExec")"
+    exec="$(get "Exec" | sed 's/%.//' )"
+    terminal="$(get "Terminal")"
+    if [[ -z "$terminal" || "$terminal" == "false" ]]; then
+      terminal="0"
+    else
+      terminal="1"
+    fi
+
+    comment="$(get "Comment")"
+
+    echo "insert into $db (  \
+      id, path, icon_name,   \
+      icon_path, try_exec, exec, \
+      terminal, comment      \
+    ) values (               \
+      '$id','$path','$icon_name', \
+      '$icon_path','$try_exec','$exec', \
+      '$terminal', '$comment' \
+    );"
+    ;;
+
+  "cache_the_machine")
+    # === cache_the_machine  # Set up a DB for (.desktop, icon, etc.) lookups.
+    db_file="${THIS_TMP}/db.desktop.db"
+    if [[ ! -f "$db_file" ]]; then
+      # sqlite3 $db_file "create table desktops ( \
+        # id TEXT    PRIMARY KEY,                 \
+        # path       TEXT,                        \
+        # icon_name  TEXT,                        \
+        # icon_path  TEXT,                        \
+        # try_exec   TEXT,                        \
+        # exec       TEXT,                        \
+        # terminal   INT DEFAULT 0,               \
+        # comment    TEXT                         \
+      # );"
+      $0 desktop_entries | xargs -I FILE $0 desktop_entry_to_insert desktops FILE
+    fi
     ;;
 
   "watch")
@@ -30,8 +95,7 @@ case $action in
     file_list="$dir/files"
     echo -e "$files"    > $file_list
 
-    desktops="$(find /home/da/.local/share/applications /usr/share/applications/ -ignore_readdir_race -maxdepth 1 \
-      -type f -iname "*.desktop" )"
+    desktops="$($0 desktop_entries)"
     desktop_list="$dir/desktops"
     echo -e "$desktops" > $desktop_list
 
@@ -174,6 +238,13 @@ case $action in
     ;;
 
   "install")
+    set -x
+    content="$(sudo cat /etc/sudoers | grep "systemctrl reboot" || echo "")"
+    if [[ -z "$content" ]]; then
+      echo "In: /etc/sudoers" 2>&1
+      echo "da ALL=NOPASSWD: /usr/bin/systemctl poweroff,/usr/bin/systemctl halt,/usr/bin/systemctl reboot" 2>&1
+    fi
+
     # === install
     sudo pacmatic -S                  \
       unzip faenza-icon-theme         \
@@ -187,11 +258,21 @@ case $action in
       vlc libav                       \
       xorg-xrdb xorg-xmodmap          \
       pekwm conky xdbinfo volumeicon  \
-      netpbm                          \
+      netpbm sqlite                   \
+      nemo nemo-fileroller nemo-share \
+      perl-file-mimeinfo  gmrun       \
       xdotool xorg-xrdb xorg-xdpyinfo
+
+    set -x
+    xdg-mime default nemo.desktop inode/directory
+    xdg-mime default google-chrome.desktop x-scheme-handler/http
+    xdg-mime default google-chrome.desktop x-scheme-handler/https
+    xdg-mime default google-chrome.desktop text/html
+    xdg-settings set default-web-browser google-chrome.desktop
     ;;
 
   "wh")
+    # === wh  # === get screen w/h dimensions
     xdbyinfo | grep dimensions
     ;;
 

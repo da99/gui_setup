@@ -3,6 +3,8 @@ Logout of Session
 ======
 * [https://bbs.archlinux.org/viewtopic.php?id=54069](https://bbs.archlinux.org/viewtopic.php?id=54069)
 * [https://bbs.archlinux.org/viewtopic.php?id=73944](https://bbs.archlinux.org/viewtopic.php?id=73944)
+* [Compiz Session](https://help.ubuntu.com/community/CompizStandalone)
+* [Shutdown/Reboot](https://wiki.archlinux.org/index.php/Allow_users_to_shutdown)
 
 Conky
 =====
@@ -23,4 +25,5 @@ Window Propertoes and icons:
 WMCTRL
 ======
 
+* [Examples](http://www.techsupportalert.com/content/tips-and-tricks-linux-mint-after-installation.htm#Enable-Windows-7-Aero-Snap)
 * [http://movingtofreedom.org/2010/08/10/arranging-windows-from-the-gnulinux-command-line-with-wmctrl/](http://movingtofreedom.org/2010/08/10/arranging-windows-from-the-gnulinux-command-line-with-wmctrl/)
