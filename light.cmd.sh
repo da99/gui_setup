@@ -10,7 +10,7 @@ escape () {
 
 to_cmd () {
   name="$(escape $(echo "$@" | cut -f1))"
-  icon="$(escape $(echo "$@" | cut  -f2))"
+  icon="$(escape $(echo "$@" | cut -f2))"
   comment="$(escape $(echo "$@" | cut -f4- | tr  '|' ':' | tr '{' '[' | tr '}' ']'))"
   # exec="$(escape $(echo "$@" | cut -f3))"
   exec="/apps/gui_setup/bin/gui_setup activate_or_launch $name"
@@ -18,6 +18,7 @@ to_cmd () {
   if [[ -n "$icon" ]]; then
     title="%I$icon% $title"
   fi
+  echo "$@" 1>&2
   echo -n "{ $title | $exec | $comment }"
 }
 
@@ -46,9 +47,9 @@ while true; do
 
 
   result=""
-  while read -r LINE
+  while read LINE
   do
-    result="${result}$(to_cmd $LINE)"
+    result="${result}$(to_cmd "$LINE")"
   done < <(gui_setup select "$val")
   echo "$result"
 

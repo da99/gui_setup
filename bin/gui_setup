@@ -107,10 +107,20 @@ case $action in
       );"
 
       while read -r FILE; do
-        echo -n "=== $FILE: "
-        sql_cmd="$($0 desktop_entry_to_insert desktops $FILE)"
-        { sqlite3 "$TMP_DB_FILE" "$sql_cmd"  2>&1 && echo "inserted"; } || \
-          echo "exit $? on $FILE"
+        case "$(basename "$FILE" .desktop)" in
+          nemo-autorun-software)
+            continue
+            ;;
+          nemo-autostart)
+            continue
+            ;;
+          *)
+            echo -n "=== $FILE: "
+            sql_cmd="$($0 desktop_entry_to_insert desktops $FILE)"
+            { sqlite3 "$TMP_DB_FILE" "$sql_cmd"  2>&1 && echo "inserted"; } || \
+              echo "exit $? on $FILE"
+            ;;
+        esac
       done < <($0 desktop_entries)
 
       mv -i "$TMP_DB_FILE" "$DB_FILE"
