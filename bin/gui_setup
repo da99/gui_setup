@@ -337,18 +337,6 @@ case $action in
     }
 
     case "$dir" in
-      left_big) # win_cycle
-        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
-        ;;
-      left_med) # win_cycle
-        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad )),$(($screen_h - 100))
-        ;;
-      right_med) # win_cycle
-        width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
-        x=$(( $screen_w - $pad - $width ))
-        wmctrl -ir $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
-        ;;
-
       center) # win_cycle
         win="$(wmctrl -lG | tr -s ' ' | grep $win_id | head -n 1)"
         if [[ -z "$win" ]]; then
@@ -361,6 +349,18 @@ case $action in
         y=$(( $screen_h / 2 - $(($win_h / 2)) ))
         wmctrl -ia "$win_id"
         wmctrl -ir "$win_id" -e 0,$x,$y,$win_w,$win_h
+        ;;
+
+      left_big) # win_cycle
+        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
+        ;;
+      left_med) # win_cycle
+        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad )),$(($screen_h - 100))
+        ;;
+      right_med) # win_cycle
+        width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
+        x=$(( $screen_w - $pad - $width ))
+        wmctrl -ir $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
         ;;
 
       center_big) # win_cycle
@@ -412,7 +412,7 @@ case $action in
         fi
         next="$(( $last - 2 ))"
         if [[ "$next" -lt 0 ]]; then
-          next="$(($total - 2))"
+          next="$(($total - 1))"
         fi
         echo $next > "$file"
         $0 move_to next
