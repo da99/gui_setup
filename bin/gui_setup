@@ -301,40 +301,55 @@ case $action in
     wmctrl -l | grep -i "$@" | tail -1 | cut -f1 -d' '
     ;;
 
-  "move_to_center")
-    ;;
-
   "move_to")
     # === move_to center    win_id
     # === move_to left_big  win_id
     # === move_to right_big win_id
+    # === move_to next
     dir="$1"
     shift
-    win_id="$1"
-    shift
+
+    if [[ -z "$@" ]]; then
+      # From: http://superuser.com/questions/382616/detecting-currently-active-window
+      raw_win_id="$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)"
+      win_id="${raw_win_id/0x/0x0}"
+    else
+      win_id="$1"
+      shift
+    fi
 
     wxh="$(wmctrl -d | tr -s ' ' | cut -d' ' -f9)"
     screen_w="$(echo "$wxh" | cut -d'x' -f1)"
     screen_h="$(echo "$wxh" | cut -d'x' -f2)"
+
     pad=10
+
     small_window_w=700
     small_window_h=500
 
+    med_window_w=$(( $small_window_w / 2 + $small_window_h))
+    med_window_h=$small_window_h
+
+    file="$(dirname "$(dirname $0)")/tmp/win_motion"
+
+    list_motions () {
+      cat $0 | grep '# ''win_cycle' | tr -d ' ' | cut -d')' -f1
+    }
+
     case "$dir" in
-      left_big)
+      left_big) # win_cycle
         wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
         ;;
-      left_med)
+      left_med) # win_cycle
         wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad )),$(($screen_h - 100))
         ;;
-      right_med)
+      right_med) # win_cycle
         width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
         x=$(( $screen_w - $pad - $width ))
-        set -x
         wmctrl -ir $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
         ;;
 
-      center)
+      center) # win_cycle
         win="$(wmctrl -lG | tr -s ' ' | grep $win_id | head -n 1)"
         if [[ -z "$win" ]]; then
           echo "!!! Window not found: $win_id" 1>&2
@@ -346,6 +361,61 @@ case $action in
         y=$(( $screen_h / 2 - $(($win_h / 2)) ))
         wmctrl -ia "$win_id"
         wmctrl -ir "$win_id" -e 0,$x,$y,$win_w,$win_h
+        ;;
+
+      center_big) # win_cycle
+        width=$(($screen_w - $(( $pad * 4)) ))
+        height=$(($screen_h - $(( $pad * 8)) ))
+        x=$(( $pad + $pad ))
+        y=$(( $pad + $pad ))
+        wmctrl -ir $win_id -e 0,$x,$y,$width,$height
+        ;;
+
+      left_top_med) # win_cycle
+        width=$med_window_w
+        height=$med_window_h
+        x=$(( $screen_w - $width - $pad ))
+        y=$pad
+        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
+        ;;
+
+      left_bottom_med) # win_cycle
+        width=$med_window_w
+        height=$med_window_h
+        x=$(( $screen_w - $width - $pad ))
+        y=$(( $pad + $pad + $med_window_h ))
+        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
+        ;;
+
+      next)
+        motions=$(list_motions)
+        count=$(echo -e "$motions" | wc -l)
+        if [[ ! -f "$file" ]]; then
+          echo "0" > "$file"
+        fi
+        last="$(cat "$file")"
+        if [[ "$last" -eq "$count" ]]; then
+          last=0
+        fi
+        next=$(($last + 1))
+        echo "$next" > "$file"
+        here=$(echo -e "$motions" | tail -n +$next | head -n 1)
+        $0 move_to $here $win_id
+        ;;
+
+      prev)
+        total=$(list_motions | wc -l)
+        if [[ -f "$file" ]]; then
+          last="$(cat "$file")"
+        else
+          last="$total"
+        fi
+        next="$(( $last - 2 ))"
+        if [[ "$next" -lt 0 ]]; then
+          next="$(($total - 2))"
+        fi
+        echo $next > "$file"
+        $0 move_to next
         ;;
 
       *)
