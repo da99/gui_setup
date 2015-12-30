@@ -87,7 +87,7 @@ case $action in
         echo "== Not found: $name" 1>&2
         exit 1
       fi
-      $cmd
+      nohup $cmd &>/dev/null &
     fi
     ;;
 
@@ -299,6 +299,60 @@ case $action in
 
   "window_title_grep")
     wmctrl -l | grep -i "$@" | tail -1 | cut -f1 -d' '
+    ;;
+
+  "move_to_center")
+    ;;
+
+  "move_to")
+    # === move_to center    win_id
+    # === move_to left_big  win_id
+    # === move_to right_big win_id
+    dir="$1"
+    shift
+    win_id="$1"
+    shift
+
+    wxh="$(wmctrl -d | tr -s ' ' | cut -d' ' -f9)"
+    screen_w="$(echo "$wxh" | cut -d'x' -f1)"
+    screen_h="$(echo "$wxh" | cut -d'x' -f2)"
+    pad=10
+    small_window_w=700
+    small_window_h=500
+
+    case "$dir" in
+      left_big)
+        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
+        ;;
+      left_med)
+        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad )),$(($screen_h - 100))
+        ;;
+      right_med)
+        width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
+        x=$(( $screen_w - $pad - $width ))
+        set -x
+        wmctrl -ir $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
+        ;;
+
+      center)
+        win="$(wmctrl -lG | tr -s ' ' | grep $win_id | head -n 1)"
+        if [[ -z "$win" ]]; then
+          echo "!!! Window not found: $win_id" 1>&2
+          exit 1
+        fi
+        win_w="$(echo "$win" | cut -d' ' -f5)"
+        win_h="$(echo "$win" | cut -d' ' -f6)"
+        x=$(( $screen_w / 2 - $(($win_w / 2)) ))
+        y=$(( $screen_h / 2 - $(($win_h / 2)) ))
+        wmctrl -ia "$win_id"
+        wmctrl -ir "$win_id" -e 0,$x,$y,$win_w,$win_h
+        ;;
+
+      *)
+        echo "!!! Unknown cmd: $dir" 1>&2
+        exit 1
+        ;;
+    esac
     ;;
 
   "window")

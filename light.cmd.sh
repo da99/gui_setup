@@ -18,7 +18,6 @@ to_cmd () {
   if [[ -n "$icon" ]]; then
     title="%I$icon% $title"
   fi
-  echo "$@" 1>&2
   echo -n "{ $title | $exec | $comment }"
 }
 
