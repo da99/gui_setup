@@ -8,6 +8,7 @@ temp="$(dirname $(dirname $(realpath $0)))/tmp"
 THIS_DIR="$(dirname "$(dirname $0)")"
 THIS_TMP="${THIS_DIR}/tmp"
 DB_FILE="${THIS_TMP}/db.desktop.db"
+TMP_DB_FILE="/tmp/gui_setup.db.desktop.db"
 shift
 
 case $action in
@@ -22,7 +23,7 @@ case $action in
       /usr/share/applications/           \
       -ignore_readdir_race -maxdepth 1   \
       -type f                            \
-      -iname "*.desktop"
+      -iname "*.desktop" | sort
     ;;
 
   "desktop_entry_to_insert")
@@ -31,13 +32,19 @@ case $action in
     path="$1"
 
     get () {
-      raw="$(grep "${1}=" "$path" | cut -d'=' -f2 | head -n 1)"
-      echo "${raw//\'/}"
+      # === Example input:
+      #   Exec=/path/cmd --dom=romere
+      #   Comment=some | title | goes here
+      raw="$(grep "${1}=" "$path" | cut -d'=' -f2- | head -n 1)"
+      raw="${raw//\'/}"
+      raw="${raw//\\t/ }"
+
+      echo -e "$raw"
     }
 
     id="$(basename $path .desktop)"
     icon_name="$(get "Icon")"
-    icon_path="$($0 app_name_to_icon "${icon_name}")"
+    icon_path="$($0 app_name_to_icon "${icon_name}" || :)"
     try_exec="$(get "TryExec")"
     exec="$(get "Exec" | sed 's/%.//' )"
     terminal="$(get "Terminal")"
@@ -60,10 +67,35 @@ case $action in
     );"
     ;;
 
+  "activate_or_launch")
+    # === activate_or_launch id # activates or launches window
+
+    name="$1"
+    shift
+    case $name in
+      gnome-terminal)
+        name="gnome-terminal-server"
+        ;;
+    esac
+
+    win_id="$($0 normal_window_info |  grep --extended-regexp -i '^[^[:space:]]+[[:space:]]'$name'[[:space:]]'  | cut -f1 || :)"
+    if [[ -n "$win_id" ]]; then
+      wmctrl -ia "$win_id"
+    else
+      cmd="$(sqlite3 -separator $'\t' "$DB_FILE" "SELECT exec FROM desktops WHERE id = '$name' LIMIT 1;")"
+      if [[ -z "$cmd" ]]; then
+        echo "== Not found: $name" 1>&2
+        exit 1
+      fi
+      $cmd
+    fi
+    ;;
+
   "cache_the_machine")
     # === cache_the_machine  # Set up a DB for (.desktop, icon, etc.) lookups.
     if [[ ! -f "$DB_FILE" ]]; then
-      sqlite3 $DB_FILE "create table desktops ( \
+      rm -f "$TMP_DB_FILE"
+      sqlite3 $TMP_DB_FILE "create table desktops ( \
         id TEXT    PRIMARY KEY,                 \
         path       TEXT,                        \
         icon_name  TEXT,                        \
@@ -73,20 +105,50 @@ case $action in
         terminal   INT DEFAULT 0,               \
         comment    TEXT                         \
       );"
+
+      while read -r FILE; do
+        echo -n "=== $FILE: "
+        sql_cmd="$($0 desktop_entry_to_insert desktops $FILE)"
+        { sqlite3 "$TMP_DB_FILE" "$sql_cmd"  2>&1 && echo "inserted"; } || \
+          echo "exit $? on $FILE"
+      done < <($0 desktop_entries)
+
+      mv -i "$TMP_DB_FILE" "$DB_FILE"
     fi
-    while read -r FILE; do
-      status="0"
-      sqlite3 "$DB_FILE" "$($0 desktop_entry_to_insert desktops $FILE)" || status="$?"
-      if [[ ! "$status" -eq "0" && ! "$status" -eq "19" ]]; then
-        exit "$status"
-      fi
-      echo "=== Inserted: $FILE"
-    done < <($0 desktop_entries)
     ;;
 
   "select")
-    # === select partial_or_full_id # returns SQLite3 '|'-delimited rows
-    sqlite3 "$DB_FILE" "SELECT id, icon_path, exec, comment FROM desktops WHERE id LIKE '$1%' LIMIT 10;"
+    # === select partial_or_full_id # returns TAB-delimited cols, rows
+    sqlite3 -separator $'\t' "$DB_FILE" "SELECT id, icon_path, exec, comment FROM desktops WHERE id LIKE '$1%' LIMIT 10;"
+    ;;
+
+  "normal_window_info")
+    # === normal_window_info # Returns a TAB-delimited list: winid exec_name, pid, title
+    info="$(wmctrl -lp | tr -s ' ')"
+    win_ids="$(echo -e "$info" | cut -d' ' -f1)"
+    types="$(echo -e "$win_ids" | xargs -I ID xprop -id ID _NET_WM_WINDOW_TYPE  | cut -d'=' -f2- | tr -d ' ')"
+    pids="$(echo -e "$info" | cut -d' ' -f3)"
+    titles="$(echo -e "$info" | cut -d' ' -f5-)"
+
+    full="$(paste <(echo -e "$types") <(echo -e "$win_ids") <(echo -e "$pids") <(echo -e "$titles"))"
+
+    # We first HAVE TO filter out non-normal windows, THEN get the PID/COMM info.
+    # This is because sometimes the pid of window is listed as "0". I don't know why.
+    #  A pid of "0" will lead "ps" to give us an out-of-range error.
+    normal="$(echo -e "$full" | grep _NET_WM_WINDOW_TYPE_NORMAL | cut -f2-)"
+    comms="$(echo -e "$normal" | cut -f2 | xargs -I PID ps -o args= -p PID | cut -d' ' -f1 | xargs -I NAME basename NAME  )"
+
+    # procs=""
+    # while read -r PID; do
+      # temp="$(pstree -An $PID | head -n 10 | tr -d "\n" | tr -s ' ')"
+      # if [[ -z "$procs" ]]; then
+        # procs="$temp"
+      # else
+        # procs="${procs}\n${temp}"
+      # fi
+    # done < <(echo -e "$raw" | tr -s ' ' | cut -d' ' -f3)
+
+    paste <(echo -e "$normal" | cut -f1) <(echo -e "$comms") <(echo -e "$normal" | cut  -f2-)
     ;;
 
   "watch")

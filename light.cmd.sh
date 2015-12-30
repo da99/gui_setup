@@ -9,11 +9,16 @@ escape () {
 }
 
 to_cmd () {
-  name="$(escape $(echo "$@" | cut -d'|' -f1))"
-  icon="$(escape $(echo "$@" | cut -d'|' -f2))"
-  comment="$(escape $(echo "$@" | cut -d'|' -f4-))"
-  exec="$(escape $(echo "$@" | cut -d'|' -f3))"
-  echo -n "{OPEN $name | $exec | "$comment" }"
+  name="$(escape $(echo "$@" | cut -f1))"
+  icon="$(escape $(echo "$@" | cut  -f2))"
+  comment="$(escape $(echo "$@" | cut -f4- | tr  '|' ':' | tr '{' '[' | tr '}' ']'))"
+  # exec="$(escape $(echo "$@" | cut -f3))"
+  exec="/apps/gui_setup/bin/gui_setup activate_or_launch $name"
+  title="OPEN $name"
+  if [[ -n "$icon" ]]; then
+    title="%I$icon% $title"
+  fi
+  echo -n "{ $title | $exec | $comment }"
 }
 
 log="/tmp/lighthouse.cmd.log"
