@@ -301,6 +301,38 @@ case $action in
     wmctrl -l | grep -i "$@" | tail -1 | cut -f1 -d' '
     ;;
 
+  "snap_to")
+    $0 move_to $1
+    exit 0
+    # === temporary shut-off for now: "check if button1 is pressed"
+    dir="$1"
+    shift
+    while read -r NUMBER; do
+      if xinput --query-state $NUMBER | grep "button\[1\]=down"; then
+        $0 move_to $dir
+        exit 0
+      else
+        xinput --query-state $NUMBER
+      fi
+    done < <(xinput --list | grep --extended-regexp 'slave\s+pointer' | cut -d'=' -f2 | cut -f1)
+    ;;
+
+  "active_window")
+    # From: http://superuser.com/questions/382616/detecting-currently-active-window
+    raw_win_id="$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)"
+    win_id="${raw_win_id/0x/0x0}"
+    $0 normal_window_info | grep "$win_id" | cut -f1
+    ;;
+
+  "active_window!")
+    win_id="$($0 active_window)"
+    if [[ -z "$win_id" ]]; then
+      echo "!!! No active normal window found." 1>&2
+      exit 1
+    fi
+    echo "$win_id"
+    ;;
+
   "move_to")
     # === move_to center    win_id
     # === move_to left_big  win_id
@@ -310,9 +342,7 @@ case $action in
     shift
 
     if [[ -z "$@" ]]; then
-      # From: http://superuser.com/questions/382616/detecting-currently-active-window
-      raw_win_id="$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)"
-      win_id="${raw_win_id/0x/0x0}"
+      win_id="$($0 active_window!)"
     else
       win_id="$1"
       shift
@@ -325,7 +355,7 @@ case $action in
     pad=10
 
     small_window_w=700
-    small_window_h=500
+    small_window_h=495
 
     med_window_w=$(( $small_window_w / 2 + $small_window_h))
     med_window_h=$small_window_h
@@ -345,8 +375,8 @@ case $action in
         fi
         win_w="$(echo "$win" | cut -d' ' -f5)"
         win_h="$(echo "$win" | cut -d' ' -f6)"
-        x=$(( $screen_w / 2 - $(($win_w / 2)) ))
-        y=$(( $screen_h / 2 - $(($win_h / 2)) ))
+        x=$(( $screen_w / 2 - $(($win_w / 2)) - 10))
+        y=$(( $screen_h / 2 - $(($win_h / 2)) - 10))
         wmctrl -ia "$win_id"
         wmctrl -ir "$win_id" -e 0,$x,$y,$win_w,$win_h
         ;;
@@ -367,11 +397,11 @@ case $action in
         width=$(($screen_w - $(( $pad * 4)) ))
         height=$(($screen_h - $(( $pad * 8)) ))
         x=$(( $pad + $pad ))
-        y=$(( $pad + $pad ))
+        y=$(( $pad + $pad  + $pad + 5))
         wmctrl -ir $win_id -e 0,$x,$y,$width,$height
         ;;
 
-      left_top_med) # win_cycle
+      right_top_med) # win_cycle
         width=$med_window_w
         height=$med_window_h
         x=$(( $screen_w - $width - $pad ))
@@ -379,11 +409,27 @@ case $action in
         wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
         ;;
 
-      left_bottom_med) # win_cycle
+      right_bottom_med) # win_cycle
         width=$med_window_w
         height=$med_window_h
         x=$(( $screen_w - $width - $pad ))
         y=$(( $pad + $pad + $med_window_h ))
+        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
+        ;;
+
+      right_top_small) # win_cycle
+        width=$small_window_w
+        height=$small_window_h
+        x=$(( $screen_w - $width - $pad ))
+        y=$pad
+        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
+        ;;
+
+      right_bottom_small) # win_cycle
+        width=$small_window_w
+        height=$(($small_window_h - $pad))
+        x=$(( $screen_w - $width - $pad ))
+        y=$(( $screen_h - $small_window_h ))
         wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
         ;;
 
@@ -476,7 +522,7 @@ case $action in
       ttf-liberation                  \
       bluez bluez-libs bluez-utils    \
       bluez-firmware blueman bluez    \
-      vlc libav                       \
+      vlc libav xorg-xev xorg-xinput  \
       xorg-xrdb xorg-xmodmap          \
       pekwm conky xdbinfo volumeicon  \
       netpbm sqlite                   \
