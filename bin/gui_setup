@@ -162,6 +162,15 @@ case $action in
     ;;
 
   "watch")
+
+    while true; do
+      sleep 1
+      find /apps/gui_setup/tmp/motion.*.txt -cmin +5 -type f -delete || :
+      sleep 30
+    done
+
+    exit 0
+
     # === watch
     orig_dir="/apps/gui_setup/tmp"
     mkdir -p $orig_dir
