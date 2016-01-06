@@ -338,10 +338,13 @@ case $action in
     # === move_to left_big  win_id
     # === move_to right_big win_id
     # === move_to next
+    # === move_to next  center|left|right
+    # === move_to prev
+    # === move_to prev  center|left|right
     dir="$1"
     shift
 
-    if [[ -z "$@" ]]; then
+    if [[ "$dir" == "next" || "$dir" == "prev" || -z "$@" ]]; then
       win_id="$($0 active_window!)"
     else
       win_id="$1"
@@ -381,6 +384,22 @@ case $action in
         wmctrl -ir "$win_id" -e 0,$x,$y,$win_w,$win_h
         ;;
 
+      center_med) # win_cycle
+        w=$med_window_w
+        h=$med_window_h
+        x=$(( $screen_w / 2 - $(($w / 2)) - 10))
+        y=$(( $screen_h / 2 - $(($h / 2)) - 10))
+        wmctrl -ir $win_id -e 0,$x,$y,$w,$h
+        ;;
+
+      center_big) # win_cycle
+        width=$(($screen_w - $(( $pad * 4)) ))
+        height=$(($screen_h - $(( $pad * 8)) ))
+        x=$(( $pad + $pad ))
+        y=$(( $pad + $pad  + $pad + 5))
+        wmctrl -ir $win_id -e 0,$x,$y,$width,$height
+        ;;
+
       left_big) # win_cycle
         wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
         ;;
@@ -391,14 +410,6 @@ case $action in
         width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
         x=$(( $screen_w - $pad - $width ))
         wmctrl -ir $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
-        ;;
-
-      center_big) # win_cycle
-        width=$(($screen_w - $(( $pad * 4)) ))
-        height=$(($screen_h - $(( $pad * 8)) ))
-        x=$(( $pad + $pad ))
-        y=$(( $pad + $pad  + $pad + 5))
-        wmctrl -ir $win_id -e 0,$x,$y,$width,$height
         ;;
 
       right_top_med) # win_cycle
@@ -433,35 +444,38 @@ case $action in
         wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
         ;;
 
-      next)
-        motions=$(list_motions)
-        count=$(echo -e "$motions" | wc -l)
-        if [[ ! -f "$file" ]]; then
-          echo "0" > "$file"
+      next|prev)
+        side="left"
+        if [[ ! -z "$@" ]]; then
+          side="$1"
+          shift
         fi
-        last="$(cat "$file")"
-        if [[ "$last" -eq "$count" ]]; then
-          last=0
-        fi
-        next=$(($last + 1))
-        echo "$next" > "$file"
-        here=$(echo -e "$motions" | tail -n +$next | head -n 1)
-        $0 move_to $here $win_id
-        ;;
 
-      prev)
-        total=$(list_motions | wc -l)
+        file="$THIS_TMP/motion.$dir.$side.txt"
+
         if [[ -f "$file" ]]; then
-          last="$(cat "$file")"
+          motions="$(cat "$file" )"
         else
-          last="$total"
+          motions=$(list_motions | grep "$side")
         fi
-        next="$(( $last - 2 ))"
-        if [[ "$next" -lt 0 ]]; then
-          next="$(($total - 1))"
+
+        if [[ "$dir" == "next" ]]; then
+          top=$(echo -e "$motions" | head -n 1)
+          bottom=$(echo -e "$motions" | tail -n +2)
+          next=$(echo -e "$bottom" | head -n 1)
+          echo -e "$bottom" >  "$file"
+          echo -e "$top"    >> "$file"
+        else
+          set -x
+          count="$(echo -e "$motions" | wc -l)"
+          top=$( echo -e "$motions" | head -n $(( $count - 1 )) )
+          bottom=$(echo -e "$motions" | tail -n 1)
+          next="$bottom"
+          echo -e "$bottom" > "$file"
+          echo -e "$top"    >>  "$file"
         fi
-        echo $next > "$file"
-        $0 move_to next
+
+        $0 move_to $next $win_id
         ;;
 
       *)
