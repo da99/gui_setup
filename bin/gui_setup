@@ -454,18 +454,29 @@ case $action in
         ;;
 
       next|prev)
-        side="left"
+        side=""
         if [[ ! -z "$@" ]]; then
           side="$1"
           shift
         fi
 
-        file="$THIS_TMP/motion.$dir.$side.txt"
+        if [[ -z "$side" ]]; then
+          file="$THIS_TMP/motion.$dir.txt"
+        else
+          file="$THIS_TMP/motion.$dir.$side.txt"
+        fi
 
         if [[ -f "$file" ]]; then
           motions="$(cat "$file" )"
         else
-          motions=$(list_motions | grep "$side")
+          motions=$(list_motions)
+          if [[ ! -z "$side" ]]; then
+            motions=$(echo -e "$motions" | grep "$side")
+          fi
+          if [[ -z "$motions" ]]; then
+            echo "!!! No motions found: $dir $side" 1>&2
+            exit 1
+          fi
         fi
 
         if [[ "$dir" == "next" ]]; then
