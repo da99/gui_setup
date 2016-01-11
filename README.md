@@ -1,4 +1,8 @@
 
+Emacs
+==============
+[http://www.zohaib.me/spacemacs-and-alchemist-to-make-elixir-of-immortality/](http://www.zohaib.me/spacemacs-and-alchemist-to-make-elixir-of-immortality/)
+
 WMCTRL, XPYINFO
 ===============
 
