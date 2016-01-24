@@ -88,6 +88,17 @@ case $action in
         exit 1
       fi
       nohup $cmd &>/dev/null &
+      if [[ "$name" == "xfce4-appfinder" ]]; then
+        COUNTER=0
+        id=""
+        until [[ -n "$id" ]] ||  [[ $COUNTER -eq 10 ]]; do
+          id="$(xwininfo -root -children -tree | { grep appfind || echo ""; } | { grep Application || echo ""; } | tr -s ' ' | cut -d' ' -f2)"
+          COUNTER=$(( $COUNTER + 1 ))
+        done
+        if [[ -n "$id" ]]; then
+          wmctrl -ia "$id"
+        fi
+      fi
     fi
     ;;
 
