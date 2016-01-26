@@ -606,6 +606,7 @@ case $action in
       perl-file-mimeinfo  gmrun       \
       xdotool xorg-xrdb xorg-xdpyinfo
 
+    yaourt -S dockbarx xfce4-dockbarx-plugin
     set -x
     xdg-mime default nemo.desktop inode/directory
     xdg-mime default google-chrome.desktop x-scheme-handler/http
