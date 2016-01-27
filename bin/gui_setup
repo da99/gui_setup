@@ -11,11 +11,64 @@ DB_FILE="${THIS_TMP}/db.desktop.db"
 TMP_DB_FILE="/tmp/gui_setup.db.desktop.db"
 shift
 
+list_motions () {
+  cat $0 | grep '# ''win_cycle' | tr -d ' ' | cut -d')' -f1
+}
+
+is_normal_window () {
+  if [[ "$(xprop -id $1 _NET_WM_WINDOW_TYPE)" == *_NET_WM_WINDOW_TYPE_NORMAL* ]]; then
+    echo "normal"
+  else
+    echo ""
+  fi
+}
 
 app_name_to_win_id () {
-  local app_name=$1
+  local app_name="$1"
   shift
-  normal_window_info |  grep --extended-regexp -i '^[^[:space:]]+[[:space:]]'$app_name'[[:space:]]'  | cut -f1 | tail -n 1 || :
+  while read -r ID; do
+    if xprop -id $ID _NET_WM_WINDOW_TYPE | grep _NET_WM_WINDOW_TYPE_NORMAL &> /dev/null ; then
+      echo ${ID/0x/0x0}
+      break
+    fi
+  done < <( \
+    xwininfo -root -children -tree  | \
+    grep -i "\"$app_name\"" | \
+    sort -r | tr -s ' ' | cut -d' ' -f2 \
+  )
+}
+
+
+active_window () {
+    # From: http://superuser.com/questions/382616/detecting-currently-active-window
+    raw_win_id="$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)"
+    win_id="${raw_win_id/0x/0x0}"
+    if [[ -z "$(is_normal_window $win_id)" ]]; then
+      echo ""
+    else
+      echo $win_id
+    fi
+}
+
+max_window_by_id () {
+  wmctrl -ia $1 -b add,maximized_vert,maximized_horz
+}
+
+unmax_window_by_id () {
+  wmctrl -ia $1 -b remove,maximized_vert,maximized_horz
+}
+
+move_window_by_id () {
+  wmctrl -ir $@
+}
+
+active_window! () {
+  win_id="$(active_window)"
+  if [[ -z "$win_id" ]]; then
+    echo "!!! No active normal window found." 1>&2
+    exit 1
+  fi
+  echo "$win_id"
 }
 
 normal_window_info () {
@@ -35,6 +88,170 @@ normal_window_info () {
 
     paste <(echo -e "$normal" | cut -f1) <(echo -e "$comms") <(echo -e "$normal" | cut  -f2-)
 }
+
+move_to () {
+    local dir="$1"
+    shift
+
+    if [[ "$dir" == "next" || "$dir" == "prev" || -z "$@" ]]; then
+      local win_id="$(active_window!)"
+    else
+      local win_id="$1"
+      shift
+    fi
+
+    unmax_window_by_id $win_id
+    if [[ "$dir" == "next" || "$dir" == "prev" ]]; then
+      local side=""
+      if [[ ! -z "$@" ]]; then
+        local side="$1"
+        shift
+      fi
+
+      if [[ -z "$side" ]]; then
+        local file="$THIS_TMP/motion.$dir.txt"
+      else
+        local file="$THIS_TMP/motion.$dir.$side.txt"
+      fi
+
+      if [[ -f "$file" ]]; then
+        local motions="$(cat "$file" )"
+      else
+        local motions=$(list_motions)
+        if [[ ! -z "$side" ]]; then
+          local motions=$(echo -e "$motions" | grep "$side")
+        fi
+        if [[ -z "$motions" ]]; then
+          echo "!!! No motions found: $dir $side" 1>&2
+          exit 1
+        fi
+      fi
+
+      if [[ "$dir" == "next" ]]; then
+        local top=$(echo -e "$motions" | head -n 1)
+        local bottom=$(echo -e "$motions" | tail -n +2)
+        local next=$(echo -e "$bottom" | head -n 1)
+        echo -e "$bottom" >  "$file"
+        echo -e "$top"    >> "$file"
+      else
+        local count="$(echo -e "$motions" | wc -l)"
+        local top=$( echo -e "$motions" | head -n $(( $count - 1 )) )
+        local bottom=$(echo -e "$motions" | tail -n 1)
+        local next="$bottom"
+        echo -e "$bottom" > "$file"
+        echo -e "$top"    >>  "$file"
+      fi
+      local dir="$next"
+    fi # === next || prev
+
+    # Get window dimesnions of current workspace (ie grep):
+    # Sample output of wmctrl -d:
+    #0 * DG: 1920x1080 VP: 0,0 WA: 0,0 1920x1031 Workspace 1
+    #1 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 2
+    #2 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 3
+    #3 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 4
+    wxh="$(wmctrl -d | tr -s ' ' | grep --extended-regexp '[0-9]+ \*' | cut -d' ' -f9  | head -n 1)"
+    if [[ -z "$wxh" ]]; then
+      echo "!!! Workspace dimensions could not be read." 1>&2
+      exit 1
+    fi
+    screen_w="$(echo "$wxh" | cut -d'x' -f1)"
+    screen_h="$(echo "$wxh" | cut -d'x' -f2)"
+
+    pad=10
+
+    small_window_w=700
+    small_window_h=495
+
+    med_window_w=$(( $small_window_w / 2 + $small_window_h))
+    med_window_h=$small_window_h
+
+    file="$(dirname "$(dirname $0)")/tmp/win_motion"
+
+
+    case "$dir" in
+      center) # win_cycle
+        win="$(wmctrl -lG | tr -s ' ' | grep $win_id | head -n 1)"
+        if [[ -z "$win" ]]; then
+          echo "!!! Window not found: $win_id" 1>&2
+          exit 1
+        fi
+        win_w="$(echo "$win" | cut -d' ' -f5)"
+        win_h="$(echo "$win" | cut -d' ' -f6)"
+        x=$(( $screen_w / 2 - $(($win_w / 2)) - 10))
+        y=$(( $screen_h / 2 - $(($win_h / 2)) - 10))
+        move_window_by_id "$win_id" -e 0,$x,$y,$win_w,$win_h
+        ;;
+
+      center_med) # Disabled temporary because it is redundant
+                  # when used w/ center, center_big
+        w=$med_window_w
+        h=$med_window_h
+        x=$(( $screen_w / 2 - $(($w / 2)) - 10))
+        y=$(( $screen_h / 2 - $(($h / 2)) - 10))
+        move_window_by_id $win_id -e 0,$x,$y,$w,$h
+        ;;
+
+      center_big) # win_cycle
+        max_window_by_id $win_id
+        ;;
+
+      left_big) # win_cycle
+        move_window_by_id $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
+        ;;
+
+      left_med) # win_cycle
+        move_window_by_id $win_id -e 0,$pad,$pad,$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad )),$(($screen_h - 100))
+        ;;
+      right_med) # win_cycle
+        width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
+        x=$(( $screen_w - $pad - $width ))
+        move_window_by_id $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
+        ;;
+
+      right_top_med) # win_cycle
+        width=$med_window_w
+        height=$med_window_h
+        x=$(( $screen_w - $width - $pad ))
+        y=$pad
+        move_window_by_id $win_id -e 0,$x,$y,$width,$height
+        ;;
+
+      right_bottom_med) # win_cycle
+        width=$med_window_w
+        height=$med_window_h
+        x=$(( $screen_w - $width - $pad ))
+        y=$(( $pad + $pad + $med_window_h ))
+        move_window_by_id $win_id -e 0,$x,$y,$width,$height
+        ;;
+
+      right_top_small) # win_cycle
+        width=$small_window_w
+        height=$small_window_h
+        x=$(( $screen_w - $width - $pad ))
+        y=$pad
+        move_window_by_id $win_id -e 0,$x,$y,$width,$height
+        ;;
+
+      right_bottom_small) # win_cycle
+        width=$small_window_w
+        height=$(($small_window_h - $pad))
+        x=$(( $screen_w - $width - $pad ))
+        y=$(( $screen_h - $small_window_h ))
+        move_window_by_id $win_id -e 0,$x,$y,$width,$height
+        ;;
+
+
+      *)
+        echo "!!! Unknown cmd: $dir" 1>&2
+        exit 1
+        ;;
+    esac
+
+}
+# ==== end function move_to
+
+
 
 case $action in
   help|--help)
@@ -130,7 +347,7 @@ case $action in
 
     win_id="$(app_name_to_win_id $app_name)"
     if [[ -n "$win_id" ]]; then
-      wmctrl -ia "$win_id"
+      wmctrl -ia "$win_id" -b remove,maximized_vert,maximized_horz
     else
       desktop="$($0 desktop_entries | grep "/${desktop_name}.desktop")"
       if [[ -z "$desktop" ]]; then
@@ -150,7 +367,7 @@ case $action in
         COUNTER=$(( $COUNTER + 1 ))
       done
       if [[ -n "$id" ]]; then
-        wmctrl -ia "$id"
+        wmctrl -ia "$id" -b remove,maximized_vert,maximized_horz
       fi
     fi
     ;;
@@ -353,14 +570,14 @@ case $action in
     ;;
 
   "snap_to")
-    $0 move_to $1
+    move_to $1
     exit 0
     # === temporary shut-off for now: "check if button1 is pressed"
     dir="$1"
     shift
     while read -r NUMBER; do
       if xinput --query-state $NUMBER | grep "button\[1\]=down"; then
-        $0 move_to $dir
+        move_to $dir
         exit 0
       else
         xinput --query-state $NUMBER
@@ -369,19 +586,11 @@ case $action in
     ;;
 
   "active_window")
-    # From: http://superuser.com/questions/382616/detecting-currently-active-window
-    raw_win_id="$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)"
-    win_id="${raw_win_id/0x/0x0}"
-    $0 normal_window_info | grep "$win_id" | cut -f1
+    active_window
     ;;
 
   "active_window!")
-    win_id="$($0 active_window)"
-    if [[ -z "$win_id" ]]; then
-      echo "!!! No active normal window found." 1>&2
-      exit 1
-    fi
-    echo "$win_id"
+    active_window!
     ;;
 
   "move_to")
@@ -392,168 +601,7 @@ case $action in
     # === move_to next  center|left|right
     # === move_to prev
     # === move_to prev  center|left|right
-    dir="$1"
-    shift
-
-    if [[ "$dir" == "next" || "$dir" == "prev" || -z "$@" ]]; then
-      win_id="$($0 active_window!)"
-    else
-      win_id="$1"
-      shift
-    fi
-
-    # Get window dimesnions of current workspace (ie grep):
-    # Sample output of wmctrl -d:
-    #0 * DG: 1920x1080 VP: 0,0 WA: 0,0 1920x1031 Workspace 1
-    #1 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 2
-    #2 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 3
-    #3 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 4
-    wxh="$(wmctrl -d | tr -s ' ' | grep --extended-regexp '[0-9]+ \*' | cut -d' ' -f9  | head -n 1)"
-    if [[ -z "$wxh" ]]; then
-      echo "!!! Workspace dimensions could not be read." 1>&2
-      exit 1
-    fi
-    screen_w="$(echo "$wxh" | cut -d'x' -f1)"
-    screen_h="$(echo "$wxh" | cut -d'x' -f2)"
-
-    pad=10
-
-    small_window_w=700
-    small_window_h=495
-
-    med_window_w=$(( $small_window_w / 2 + $small_window_h))
-    med_window_h=$small_window_h
-
-    file="$(dirname "$(dirname $0)")/tmp/win_motion"
-
-    list_motions () {
-      cat $0 | grep '# ''win_cycle' | tr -d ' ' | cut -d')' -f1
-    }
-
-    case "$dir" in
-      center) # win_cycle
-        win="$(wmctrl -lG | tr -s ' ' | grep $win_id | head -n 1)"
-        if [[ -z "$win" ]]; then
-          echo "!!! Window not found: $win_id" 1>&2
-          exit 1
-        fi
-        win_w="$(echo "$win" | cut -d' ' -f5)"
-        win_h="$(echo "$win" | cut -d' ' -f6)"
-        x=$(( $screen_w / 2 - $(($win_w / 2)) - 10))
-        y=$(( $screen_h / 2 - $(($win_h / 2)) - 10))
-        wmctrl -ia "$win_id"
-        wmctrl -ir "$win_id" -e 0,$x,$y,$win_w,$win_h
-        ;;
-
-      center_med) # win_cycle
-        w=$med_window_w
-        h=$med_window_h
-        x=$(( $screen_w / 2 - $(($w / 2)) - 10))
-        y=$(( $screen_h / 2 - $(($h / 2)) - 10))
-        wmctrl -ir $win_id -e 0,$x,$y,$w,$h
-        ;;
-
-      center_big) # win_cycle
-        width=$(($screen_w - $(( $pad * 4)) ))
-        height=$(($screen_h - $(( $pad * 8)) ))
-        x=$(( $pad + $pad ))
-        y=$(( $pad + $pad  + $pad + 5))
-        wmctrl -ir $win_id -e 0,$x,$y,$width,$height
-        ;;
-
-      left_big) # win_cycle
-        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $small_window_w - $pad )),$(($screen_h - 100))
-        ;;
-      left_med) # win_cycle
-        wmctrl -ir $win_id -e 0,$pad,$pad,$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad )),$(($screen_h - 100))
-        ;;
-      right_med) # win_cycle
-        width=$(($screen_w - $(($small_window_w / 2)) - $small_window_w - $pad ))
-        x=$(( $screen_w - $pad - $width ))
-        wmctrl -ir $win_id -e 0,$x,$pad,$width,$(($screen_h - 100))
-        ;;
-
-      right_top_med) # win_cycle
-        width=$med_window_w
-        height=$med_window_h
-        x=$(( $screen_w - $width - $pad ))
-        y=$pad
-        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
-        ;;
-
-      right_bottom_med) # win_cycle
-        width=$med_window_w
-        height=$med_window_h
-        x=$(( $screen_w - $width - $pad ))
-        y=$(( $pad + $pad + $med_window_h ))
-        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
-        ;;
-
-      right_top_small) # win_cycle
-        width=$small_window_w
-        height=$small_window_h
-        x=$(( $screen_w - $width - $pad ))
-        y=$pad
-        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
-        ;;
-
-      right_bottom_small) # win_cycle
-        width=$small_window_w
-        height=$(($small_window_h - $pad))
-        x=$(( $screen_w - $width - $pad ))
-        y=$(( $screen_h - $small_window_h ))
-        wmctrl -r :ACTIVE: -e 0,$x,$y,$width,$height
-        ;;
-
-      next|prev)
-        side=""
-        if [[ ! -z "$@" ]]; then
-          side="$1"
-          shift
-        fi
-
-        if [[ -z "$side" ]]; then
-          file="$THIS_TMP/motion.$dir.txt"
-        else
-          file="$THIS_TMP/motion.$dir.$side.txt"
-        fi
-
-        if [[ -f "$file" ]]; then
-          motions="$(cat "$file" )"
-        else
-          motions=$(list_motions)
-          if [[ ! -z "$side" ]]; then
-            motions=$(echo -e "$motions" | grep "$side")
-          fi
-          if [[ -z "$motions" ]]; then
-            echo "!!! No motions found: $dir $side" 1>&2
-            exit 1
-          fi
-        fi
-
-        if [[ "$dir" == "next" ]]; then
-          top=$(echo -e "$motions" | head -n 1)
-          bottom=$(echo -e "$motions" | tail -n +2)
-          next=$(echo -e "$bottom" | head -n 1)
-          echo -e "$bottom" >  "$file"
-          echo -e "$top"    >> "$file"
-        else
-          count="$(echo -e "$motions" | wc -l)"
-          top=$( echo -e "$motions" | head -n $(( $count - 1 )) )
-          bottom=$(echo -e "$motions" | tail -n 1)
-          next="$bottom"
-          echo -e "$bottom" > "$file"
-          echo -e "$top"    >>  "$file"
-        fi
-
-        $0 move_to $next $win_id
-        ;;
-
-      *)
-        echo "!!! Unknown cmd: $dir" 1>&2
-        exit 1
-        ;;
-    esac
+    move_to $@
     ;;
 
   "window")
