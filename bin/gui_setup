@@ -347,7 +347,7 @@ case $action in
 
     win_id="$(app_name_to_win_id $app_name)"
     if [[ -n "$win_id" ]]; then
-      wmctrl -ia "$win_id" -b remove,maximized_vert,maximized_horz
+      wmctrl -ia "$win_id"
     else
       desktop="$($0 desktop_entries | grep "/${desktop_name}.desktop")"
       if [[ -z "$desktop" ]]; then
