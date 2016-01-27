@@ -402,7 +402,17 @@ case $action in
       shift
     fi
 
-    wxh="$(wmctrl -d | tr -s ' ' | cut -d' ' -f9)"
+    # Get window dimesnions of current workspace (ie grep):
+    # Sample output of wmctrl -d:
+    #0 * DG: 1920x1080 VP: 0,0 WA: 0,0 1920x1031 Workspace 1
+    #1 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 2
+    #2 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 3
+    #3 - DG: 1920x1080 VP: N/A WA: 0,0 1920x1031 Workspace 4
+    wxh="$(wmctrl -d | tr -s ' ' | grep --extended-regexp '[0-9]+ \*' | cut -d' ' -f9  | head -n 1)"
+    if [[ -z "$wxh" ]]; then
+      echo "!!! Workspace dimensions could not be read." 1>&2
+      exit 1
+    fi
     screen_w="$(echo "$wxh" | cut -d'x' -f1)"
     screen_h="$(echo "$wxh" | cut -d'x' -f2)"
 
@@ -528,7 +538,6 @@ case $action in
           echo -e "$bottom" >  "$file"
           echo -e "$top"    >> "$file"
         else
-          set -x
           count="$(echo -e "$motions" | wc -l)"
           top=$( echo -e "$motions" | head -n $(( $count - 1 )) )
           bottom=$(echo -e "$motions" | tail -n 1)
