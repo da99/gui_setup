@@ -285,6 +285,7 @@ case $action in
     # === reload-browser
     # === reload-browser  google-chrome|firefox|...
     # === reload-browser  google-chrome|firefox|...   "Title of window"
+    this_window="$( xdotool getactivewindow )"
     if [[ -z "$@" ]]; then
       class_name="google-chrome"
     else
@@ -292,17 +293,19 @@ case $action in
     fi
 
     if [[ -z "$@" ]]; then
-      xdotool search --all --onlyvisible --class "${class_name}" windowfocus windowactivate key  --clearmodifiers "F5"
-      exit $?
+      win_id="$(xdotool search --all --onlyvisible --class "$class_name")"
+    else
+      name="$1"; shift
+      win_id="$(sort <(xdotool search --all --onlyvisible --class "$class_name") <(xdotool search --all --onlyvisible --name "$name") | uniq -d)"
+      if [[ -z "$win_id" ]]; then
+        echo "!!! Window not found" 1>&2
+        exit 1
+      fi
     fi
 
-    name="$1"; shift
-    win_id="$(sort <(xdotool search --all --onlyvisible --class "google-chrome") <(xdotool search --all --onlyvisible --name "") | uniq -d)"
-    if [[ -z "$win_id" ]]; then
-      echo "!!! Window not found" 1>&2
-      exit 1
-    fi
-    xdotool windowfocus $win_id  key 'F5'
+    set -x
+    xdotool windowfocus --sync $win_id  key --clearmodifiers --delay 0 'F5'
+    xdotool windowfocus --sync $this_window
     ;;
 
   "desktop_entry_to_insert")
