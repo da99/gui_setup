@@ -297,7 +297,7 @@ case $action in
     fi
 
     name="$1"; shift
-    win_id="$(comm -12 <(xdotool search --all --onlyvisible --class "google-chrome" | sort) <(xdotool search --all --onlyvisible --name "" | sort))"
+    win_id="$(sort <(xdotool search --all --onlyvisible --class "google-chrome") <(xdotool search --all --onlyvisible --name "") | uniq -d)"
     if [[ -z "$win_id" ]]; then
       echo "!!! Window not found" 1>&2
       exit 1
