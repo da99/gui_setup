@@ -281,6 +281,30 @@ case $action in
       echo -e "$raw" | sed 's/%.//'
       ;;
 
+  "reload-browser")
+    # === reload-browser
+    # === reload-browser  google-chrome|firefox|...
+    # === reload-browser  google-chrome|firefox|...   "Title of window"
+    if [[ -z "$@" ]]; then
+      class_name="google-chrome"
+    else
+      class_name="$1"; shift
+    fi
+
+    if [[ -z "$@" ]]; then
+      xdotool search --all --onlyvisible --class "${class_name}" windowfocus windowactivate key  --clearmodifiers "F5"
+      exit $?
+    fi
+
+    name="$1"; shift
+    win_id="$(comm -12 <(xdotool search --all --onlyvisible --class "google-chrome" | sort) <(xdotool search --all --onlyvisible --name "" | sort))"
+    if [[ -z "$win_id" ]]; then
+      echo "!!! Window not found" 1>&2
+      exit 1
+    fi
+    xdotool windowfocus $win_id  key 'F5'
+    ;;
+
   "desktop_entry_to_insert")
     db="$1"
     shift
