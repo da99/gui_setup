@@ -1,0 +1,25 @@
+[Configuration]
+FontName=Inconsolata for Powerline Medium 12
+MiscAlwaysShowTabs=FALSE
+MiscBell=FALSE
+MiscBordersDefault=TRUE
+MiscCursorBlinks=TRUE
+MiscCursorShape=TERMINAL_CURSOR_SHAPE_BLOCK
+MiscDefaultGeometry=80x24
+MiscInheritGeometry=FALSE
+MiscMenubarDefault=TRUE
+MiscMouseAutohide=FALSE
+MiscToolbarDefault=FALSE
+MiscConfirmClose=TRUE
+MiscCycleTabs=TRUE
+MiscTabCloseButtons=TRUE
+MiscTabCloseMiddleClick=TRUE
+MiscTabPosition=GTK_POS_TOP
+MiscHighlightUrls=TRUE
+ColorPalette=#000000000000;#cccc00000000;#5dffa4e71ad4;#b95b74d41144;#0c4e6cf8b476;#757550507b7b;#060698989a9a;#d3d3d7d7cfcf;#555557575353;#efef29292929;#910cf9572b1f;#d4b1ca860000;#2b2b8b8bd2d2;#adad7f7fa8a8;#3434e2e2e2e2;#ffffffffffff
+ColorBackground=#1c1c26262a2a
+ColorForeground=#c210c210c210
+ColorCursor=#ffffd7d70000
+TabActivityColor=#eb3b00000000
+TitleInitial=XFCE Terminal
+

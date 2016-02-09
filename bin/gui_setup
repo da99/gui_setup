@@ -665,12 +665,14 @@ case $action in
     ;;
 
   "install")
-    set -x
-    content="$(sudo cat /etc/sudoers | grep "systemctrl reboot" || echo "")"
-    if [[ -z "$content" ]]; then
-      echo "In: /etc/sudoers" 2>&1
-      echo "da ALL=NOPASSWD: /usr/bin/systemctl poweroff,/usr/bin/systemctl halt,/usr/bin/systemctl reboot" 2>&1
-    fi
+    bash_setup make_link $THIS_DIR/special_dots/terminalrc ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/terminal/terminalrc
+
+    # set -x
+    # content="$(sudo cat /etc/sudoers | grep "systemctrl reboot" || echo "")"
+    # if [[ -z "$content" ]]; then
+    #   echo "In: /etc/sudoers" 2>&1
+    #   echo "da ALL=NOPASSWD: /usr/bin/systemctl poweroff,/usr/bin/systemctl halt,/usr/bin/systemctl reboot" 2>&1
+    # fi
 
     # === install
     sudo pacmatic -S                  \
