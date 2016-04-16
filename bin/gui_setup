@@ -281,32 +281,6 @@ case $action in
       echo -e "$raw" | sed 's/%.//'
       ;;
 
-  "reload-browser")
-    # === reload-browser
-    # === reload-browser  google-chrome|firefox|...
-    # === reload-browser  google-chrome|firefox|...   "Title of window"
-    this_window="$( xdotool getactivewindow )"
-    if [[ -z "$@" ]]; then
-      class_name="google-chrome"
-    else
-      class_name="$1"; shift
-    fi
-
-    if [[ -z "$@" ]]; then
-      win_id="$(xdotool search --all --onlyvisible --class "$class_name")"
-    else
-      name="$1"; shift
-      win_id="$(sort <(xdotool search --all --onlyvisible --class "$class_name") <(xdotool search --all --onlyvisible --name "$name") | uniq -d)"
-      if [[ -z "$win_id" ]]; then
-        echo "!!! Window not found" 1>&2
-        exit 1
-      fi
-    fi
-
-    xdotool windowfocus --sync $win_id  key --clearmodifiers --delay 0 'F5'
-    xdotool windowfocus --sync $this_window
-    ;;
-
   "desktop_entry_to_insert")
     db="$1"
     shift
@@ -707,7 +681,14 @@ case $action in
     ;;
 
   *)
-    echo "Unknown option: $action" 1>&2
+    func_file="$THIS_DIR/bin/lib/${action}.sh"
+    if [[ -s "$func_file" ]]; then
+      source "$func_file"
+      "$action" "$@"
+      exit 0
+    fi
+
+    echo "Unknown option for $(basename "$0"): $action" 1>&2
     exit 1
     ;;
 
