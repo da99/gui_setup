@@ -20,8 +20,11 @@ reload-browser () {
     local +x WINDOWS="$($0 normal_window_info)"
 
     for WIN_ID in $win_id ; do
-      mksh_setup BOLD "=== Reloading: {{$(echo "$WINDOWS" | grep $(printf 0x0%x $WIN_ID) || echo "[unknown window]")}}"
-      xdotool windowfocus --sync $WIN_ID  key --clearmodifiers --delay 0 'F5'
+      local +x RELOAD="xdotool windowfocus --sync $WIN_ID  key --clearmodifiers F5"
+      mksh_setup BOLD "=== Reloaded: $WIN_ID -> {{$(echo "$WINDOWS" | grep $(printf 0x0%x $WIN_ID) || echo "[unknown window]")}}"
+      $RELOAD
+      sleep 0.2 # If there is delay, the window will lose focus and the 'key press' (F5) may not be
+                # passed on the window (ie racing issue between focusing and key press.)
     done
 
     xdotool windowfocus --sync $this_window
