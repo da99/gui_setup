@@ -681,7 +681,7 @@ case $action in
     ;;
 
   *)
-    func_file="$THIS_DIR/bin/lib/${action}.sh"
+    func_file="$THIS_DIR/bin/public/${action}/_.sh"
     if [[ -s "$func_file" ]]; then
       source "$func_file"
       "$action" "$@"
