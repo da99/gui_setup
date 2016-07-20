@@ -681,12 +681,7 @@ case $action in
     ;;
 
   *)
-    func_file="$THIS_DIR/bin/public/${action}/_.sh"
-    if [[ -s "$func_file" ]]; then
-      source "$func_file"
-      "$action" "$@"
-      exit 0
-    fi
+    mksh_setup name-to-func "$0" "$action" "$@"
 
     echo "Unknown option for $(basename "$0"): $action" 1>&2
     exit 1
