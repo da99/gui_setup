@@ -681,10 +681,8 @@ case $action in
     ;;
 
   *)
-    mksh_setup name-to-func "$0" "$action" "$@"
-
-    echo "Unknown option for $(basename "$0"): $action" 1>&2
-    exit 1
+    source "$THIS_DIR/../mksh_setup/bin/source/name-to-func/_.sh"
+    name-to-func "$action"  "$@"
     ;;
 
 esac
