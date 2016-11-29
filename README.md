@@ -8,6 +8,8 @@ WMCTRL, XPYINFO
 
     WIDTH=`xdpyinfo | grep 'dimensions:' | cut -f 2 -d ':' | cut -f 1 -d 'x'` && HALF=$(($WIDTH/2)) && wmctrl -r :ACTIVE: -b add,maximized_vert && wmctrl -r :ACTIVE: -e 0,0,0,$HALF,-1
 
+    1) https://www.reddit.com/r/unixporn/comments/4nfb8f/how_do_i_get_rofi_window_switcher_to_only_show/
+
 Fonts
 =====
 * [https://www.reddit.com/r/archlinux/comments/3yqu5p/my_arch_linux_fonts_rendering_config_without/](https://www.reddit.com/r/archlinux/comments/3yqu5p/my_arch_linux_fonts_rendering_config_without/)
