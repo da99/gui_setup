@@ -9,6 +9,7 @@ WMCTRL, XPYINFO
     WIDTH=`xdpyinfo | grep 'dimensions:' | cut -f 2 -d ':' | cut -f 1 -d 'x'` && HALF=$(($WIDTH/2)) && wmctrl -r :ACTIVE: -b add,maximized_vert && wmctrl -r :ACTIVE: -e 0,0,0,$HALF,-1
 
     1) https://www.reddit.com/r/unixporn/comments/4nfb8f/how_do_i_get_rofi_window_switcher_to_only_show/
+    2) http://askubuntu.com/questions/269574/wmctrl-focus-most-recent-window-of-an-app
 
 Fonts
 =====
@@ -43,3 +44,9 @@ WMCTRL
 
 * [Examples](http://www.techsupportalert.com/content/tips-and-tricks-linux-mint-after-installation.htm#Enable-Windows-7-Aero-Snap)
 * [http://movingtofreedom.org/2010/08/10/arranging-windows-from-the-gnulinux-command-line-with-wmctrl/](http://movingtofreedom.org/2010/08/10/arranging-windows-from-the-gnulinux-command-line-with-wmctrl/)
+
+wmutils
+======
+
+* [List of tutorial and movies](https://www.reddit.com/r/unixporn/comments/3b42zj/people_using_wmutils_how_do_you_use_it/)
+
