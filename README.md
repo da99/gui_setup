@@ -50,3 +50,12 @@ wmutils
 
 * [List of tutorial and movies](https://www.reddit.com/r/unixporn/comments/3b42zj/people_using_wmutils_how_do_you_use_it/)
 
+Exiting Windows gracefully:
+===========================
+  * (Log out of xorg)[https://www.reddit.com/r/archlinux/comments/2b0sbs/whats_the_best_way_to_log_out_of_an_xorg_session/cj0pajj/]
+  ```
+    wmctrl -l | awk '{print $1}' | while read APP; do
+      wmctrl -i -c $APP || echo "$APP not killed"
+    done
+  ```
+
