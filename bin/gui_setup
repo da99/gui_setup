@@ -5,7 +5,7 @@ set -u -e -o pipefail
 
 action=$1
 temp="$(dirname $(dirname $(realpath $0)))/tmp"
-THIS_DIR="$(bash_setup dirname_of_bin "$0")"
+THIS_DIR="$(dirname "$(dirname "$0")")"
 THIS_TMP="${THIS_DIR}/tmp"
 DB_FILE="${THIS_TMP}/db.desktop.db"
 TMP_DB_FILE="/tmp/gui_setup.db.desktop.db"
@@ -641,7 +641,6 @@ case $action in
     bash_setup make_link $THIS_DIR/special_dots/terminalrc                   ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/terminal/terminalrc
     bash_setup make_link $THIS_DIR/special_dots/xfce4-keyboard-shortcuts.xml ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml 
 
-    # set -x
     # content="$(sudo cat /etc/sudoers | grep "systemctrl reboot" || echo "")"
     # if [[ -z "$content" ]]; then
     #   echo "In: /etc/sudoers" 2>&1
@@ -667,7 +666,7 @@ case $action in
       xdotool xorg-xrdb xorg-xdpyinfo
 
     yaourt -S dockbarx xfce4-dockbarx-plugin
-    set -x
+    set "-x"
     xdg-mime default nemo.desktop inode/directory
     xdg-mime default google-chrome.desktop x-scheme-handler/http
     xdg-mime default google-chrome.desktop x-scheme-handler/https
