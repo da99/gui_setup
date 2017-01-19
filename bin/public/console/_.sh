@@ -37,22 +37,28 @@ console () {
   local +x DCOLOR="#8f8f8f"
 
   # === Media:
-  # ( while true; do
-  #   local +x MIN="$(date '+%M')"
+  get_media_line () {
+    local +x MIN="$(date '+%M')"
 
-  #   echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get channel99-title)
-  #   echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get channel101-title)
-  #   echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get lotdg-title)
-  #   echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get q77-title)
-  #   echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get asi-title)
-  #   echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
+    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get channel99-title)
+    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get channel101-title)
+    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get lotdg-title)
+    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get q77-title)
+    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get asi-title)
+    echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
+    echo ""
+    #   # This are not working for now:
+    #   # echo -n "%{r}$(get vlc-title)"
+  }
 
-  #   # This are not working for now:
-  #   # echo -n "%{r}$(get vlc-title)"
-  #   echo ""
-  #   sleep 5
-  # done | lemonbar -b -p -n daMediaStatus ) &
+  (
+    while true; do
+      get_media_line
+      sleep 3
+    done | lemonbar -b -p -n daMediaStatus
+  ) &
 
+  # === Top bar:
   get_window_titles () {
     local +x IFS=$'\n'
     for WIN in $(dawin list-apps); do
@@ -164,13 +170,20 @@ if-stale () {
 icy-title () {
   local +x URL="$1"; shift
 
-  local +x TITLE="$(curl -H 'icy-metadata: 1' "$URL"  -s | head -c 34000 | grep --text -Pzo "(?s)StreamTitle='\K(.*)(?=';Stream)" || : )"
 
-  if [[ -z "$TITLE" ]]; then
-    echo "[unknown]"
-  else
-    echo "$TITLE"
-  fi
+  local +x TITLE="$((curl -H 'icy-metadata: 1' "$URL"  -s || echo "[down]") | head -c 34000 | grep --text -Pzo "(?s)(StreamTitle='\K(.*)(?=';Stream))|down|(4|5)\d\d Service \w" )"
+
+  case "$TITLE" in
+    *" Service "*)
+      echo "[down]"
+      ;;
+    "")
+      echo "[empty]"
+      ;;
+    *)
+      echo "$TITLE"
+      ;;
+  esac
 }
 
 asi-title () {
