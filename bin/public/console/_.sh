@@ -1,66 +1,57 @@
 
 
-source "$THIS_DIR/bin/public/vlc-title/_.sh"
 
 # === {{CMD}}
-gui-console () {
+console () {
 
-  sleep 2
+  # sleep 2
   PATH="$PATH:$THIS_DIR/../sh_string/bin"
-  PATH="$PATH:$THIS_DIR/../dawm/bin"
+  PATH="$PATH:$THIS_DIR/../dawin/bin"
+  PATH="$PATH:$THIS_DIR/../paradise/bin"
 
-  if [[ "$@" == "quit" ]]; then
+  echo "PID: $$"
 
-    local +x ME=$$
-    local +x PID=$(pgrep -f "/paradise gui-console" | grep -v "$ME" | head -n 1)
-
-    local +x IFS=$'\n'
-
-    for GROUP in $(pgrep -f "/paradise gui-console" | xargs -I ID pstree -a -A  -p -g ID | grep -P '^[^[:space:]].+paradise[[:space:]]+gui-console$' | cut -d',' -f3 | cut -d' ' -f1 | uniq ) ; do
-      kill -SIGINT -- -"$GROUP" || echo '!!! Group not killed: '$GROUP
-    done
-
-    return 0
-
-  fi
-
-  close-all () {
-    echo "=== Closing gui-console: $$, Previous exit code: $?" >&2
-    exit 0
-  }
-  trap 'close-all' SIGINT SIGTERM ERR
-
-
-  echo $$
   PATH="$PATH:/progs/wmutils/bin"
   local +x COUNTER=0
 
   if ! type lemonbar &>/dev/null ; then
-    echo "!!! Install lemonbar."
+    echo "!!! Install lemonbar." >&2
+    exit 1
   fi
 
-  if ! type dawm &>/dev/null ; then
-    echo "!!! Install dawm."
+  if ! type dawin &>/dev/null ; then
+    echo "!!! Install dawin." >&2
+    exit 1
   fi
 
   if ! type curl &>/dev/null; then
-    echo "!!! Install curl."
+    echo "!!! Install curl." >&2
+    exit 1
   fi
 
   if ! type lynx &>/dev/null; then
     echo "!!! Install lynx."
+    exit 1
   fi
+
+  local +x DCOLOR="#8f8f8f"
 
   # === Top bar:
   while true ; do
-    local +x CURR_WIN_ID="$(pfw 2>/dev/null || :)"
-    echo -n "  "$(date "+%a %b %d, %r")
-    if [[ -z "$CURR_WIN_ID" ]]; then
-      echo -n "[no window]"
-    else
-      echo -n "   %{c}$( dawm titles | grep "$CURR_WIN_ID" | head -n 1 | cut -d' ' -f2-)"
-    fi
+    echo -n "  "$(date "+%a %b %d, %r")"   "
 
+    local +x ORIG_IFS="$IFS"
+    local +x IFS=$'\n'
+    for WIN in $(dawin list-apps); do
+      local +x ID="$(echo "$WIN" | cut -d' ' -f1)"
+      if [[ "$(xprop -id "$ID" _NET_WM_STATE)" == *"_NET_WM_STATE_HIDDEN" ]] ; then
+        echo -n "%{F$DCOLOR}$(echo "$WIN" | cut -d' ' -f2)%{F-}  "
+      else
+        echo -n "$(echo "$WIN" | cut -d' ' -f2)  "
+      fi
+    done
+
+    IFS="$ORIG_IFS"
     echo -n '%{r}'
 
     {
@@ -69,23 +60,24 @@ gui-console () {
 
     # echo -n "CPU: $(process cpu-usage | tr '\n' ' ')  "
     echo "$(paradise volume graph)   "
-    # No sleep necessary because 'paradise internet-activity' sleeps for 1 second.
+    # No sleep necessary because 'paradise internet-activity' sleeps.
   done | lemonbar -d -p -n daBottomStatus &
 
   # done | lemonbar -d -p -n daConsole -g "$((  $(wattr w $(lsw -r))  - 160 ))x18+160+0"
+
 
   # === Media:
   while true; do
     local +x MIN="$(date '+%M')"
 
-    echo  -n "  NHK: $(get nhk-title)"
-    echo  -n "  *C99: $(get channel99-title)"
-    echo  -n "  *C101: $(get channel101-title)"
-    echo  -n "  *LOTDG: $(get lotdg-title)"
-    echo  -n "  *ASI: $(get asi-title)"
+    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get channel99-title)
+    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get channel101-title)
+    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get lotdg-title)
+    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get q77-title)
+    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get asi-title)
+    echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
 
     # This are not working for now:
-    # echo  -n "  *Q77: $(get q77-title)"
     # echo -n "%{r}$(get vlc-title)"
     echo ""
     sleep 5
