@@ -7,11 +7,11 @@ console () {
   # sleep 2
   PATH="$PATH:$THIS_DIR/../sh_string/bin"
   PATH="$PATH:$THIS_DIR/../dawin/bin"
-  PATH="$PATH:$THIS_DIR/../paradise/bin"
+  # PATH="$PATH:$THIS_DIR/../paradise/bin"
 
   echo "PID: $$"
 
-  PATH="$PATH:/progs/wmutils/bin"
+  # PATH="$PATH:/progs/wmutils/bin"
   local +x COUNTER=0
 
   if ! type lemonbar &>/dev/null ; then
@@ -36,52 +36,96 @@ console () {
 
   local +x DCOLOR="#8f8f8f"
 
-  # === Top bar:
-  while true ; do
-    echo -n "  "$(date "+%a %b %d, %r")"   "
+  # === Media:
+  # ( while true; do
+  #   local +x MIN="$(date '+%M')"
 
-    local +x ORIG_IFS="$IFS"
+  #   echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get channel99-title)
+  #   echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get channel101-title)
+  #   echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get lotdg-title)
+  #   echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get q77-title)
+  #   echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get asi-title)
+  #   echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
+
+  #   # This are not working for now:
+  #   # echo -n "%{r}$(get vlc-title)"
+  #   echo ""
+  #   sleep 5
+  # done | lemonbar -b -p -n daMediaStatus ) &
+
+  get_window_titles () {
     local +x IFS=$'\n'
     for WIN in $(dawin list-apps); do
       local +x ID="$(echo "$WIN" | cut -d' ' -f1)"
-      if [[ "$(xprop -id "$ID" _NET_WM_STATE)" == *"_NET_WM_STATE_HIDDEN" ]] ; then
-        echo -n "%{F$DCOLOR}$(echo "$WIN" | cut -d' ' -f2)%{F-}  "
-      else
-        echo -n "$(echo "$WIN" | cut -d' ' -f2)  "
+      local +x TITLE="$(echo "$WIN" | cut -d' ' -f2)"
+      local +x STATE="$(xprop -id "$ID" _NET_WM_STATE || :)"
+
+      if [[ "$STATE" == *"_NET_WM_STATE_ABOVE"* ]] ; then
+        TITLE="*$TITLE"
       fi
+
+      if [[ "$STATE" == *"_NET_WM_STATE_HIDDEN"* ]] ; then
+        TITLE="%{F$DCOLOR}$TITLE%{F-}"
+        TITLE="%{A:unhide $ID:}$TITLE%{A}"
+      else
+        TITLE="%{A:hide $ID:}$TITLE%{A}"
+      fi
+
+      echo -n " $TITLE "
     done
-
-    IFS="$ORIG_IFS"
-    echo -n '%{r}'
-
-    {
-      paradise internet-activity | awk '{if (NR == 1) printf "%s",$0; else printf "  %s  ",$0;}';
-    } || echo -n '[unknown internet activity]'
-
-    # echo -n "CPU: $(process cpu-usage | tr '\n' ' ')  "
-    echo "$(paradise volume graph)   "
-    # No sleep necessary because 'paradise internet-activity' sleeps.
-  done | lemonbar -d -p -n daBottomStatus &
-
-  # done | lemonbar -d -p -n daConsole -g "$((  $(wattr w $(lsw -r))  - 160 ))x18+160+0"
-
-
-  # === Media:
-  while true; do
-    local +x MIN="$(date '+%M')"
-
-    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get channel99-title)
-    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get channel101-title)
-    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get lotdg-title)
-    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get q77-title)
-    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get asi-title)
-    echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
-
-    # This are not working for now:
-    # echo -n "%{r}$(get vlc-title)"
     echo ""
-    sleep 5
-  done | lemonbar -b -d -p -n daConsole # -g "$((  $(wattr w $(lsw -r))  - 160 ))x18+160+0"
+  }
+
+  get_line () {
+    echo "  "$(date "+%a %b %d, %r")"   $(get_window_titles)"
+    # echo -n '%{r}'
+    # {
+    #   paradise internet-activity | awk '{if (NR == 1) printf "%s",$0; else printf "  %s  ",$0;}';
+    # } || echo -n '[unknown internet activity]'
+
+    # # echo -n "CPU: $(process cpu-usage | tr '\n' ' ')  "
+    # echo "$(paradise volume graph)   "
+    # # No sleep necessary because 'paradise internet-activity' sleeps.
+  }
+
+  run_command () {
+    local +x IFS=$'\n'
+    read -r LINE
+    case "$LINE" in
+      "unhide 0x"*)
+        wmctrl -i -a $(echo $LINE | cut -d' ' -f2)
+        ;;
+      "hide 0x"*)
+        wmctrl -i -r $(echo $LINE | cut -d' ' -f2) -b add,hidden
+        ;;
+      *)
+        echo "!!! Unknown command: $LINE" >&2
+        ;;
+    esac
+  }
+
+
+  # === Top bar:
+  while true ; do
+    get_line
+  done | lemonbar -p -n daTopStatus | while true; do
+    run_command
+  done
+  return 0
+
+  # while read -r CMD ; do
+  #   case "$CMD" in
+  #     "0x"*)
+  #       local +x ID="$CMD"
+  #       echo "=== focusing: $ID" >&2
+  #       wmctrl -i -a "$ID" || echo "=== error: $ID" >&2
+  #       ;;
+  #     *)
+  #       echo "=== Ignoring: $CMD" >&2
+  #       ;;
+  #   esac
+  # done
+
 
 } # === end function
 
