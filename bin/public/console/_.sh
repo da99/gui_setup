@@ -1,12 +1,14 @@
 
 
 
+
 # === {{CMD}}
 console () {
 
   # sleep 2
   PATH="$PATH:$THIS_DIR/../sh_string/bin"
   PATH="$PATH:$THIS_DIR/../dawin/bin"
+  PATH="$PATH:$THIS_DIR/../cache_setup/bin"
   # PATH="$PATH:$THIS_DIR/../paradise/bin"
 
   echo "PID: $$"
@@ -34,6 +36,8 @@ console () {
     exit 1
   fi
 
+  cache_setup ensure-setup
+
   local +x DCOLOR="#8f8f8f"
 
   # === Media:
@@ -58,12 +62,31 @@ console () {
     done | lemonbar -b -p -n daMediaStatus
   ) &
 
+  desktop-to-title () {
+    local +x FILE="$1"; shift
+
+    if [[ -z "$FILE" ]]; then
+      echo "[unknown]"
+      return 0
+    fi
+
+    local +x KEY="$(basename "$FILE" .desktop)"
+    local +x TITLE="$(cache_setup read-or-empty "$KEY")"
+    if [[ -z "$TITLE" ]]; then
+      local +x TITLE="$(grep "Name=" "$FILE" | head -n 1 | cut -d'=' -f2-)"
+      cache_setup write "$KEY" "$TITLE"
+    fi
+    echo "$TITLE"
+  }
+
   # === Top bar:
   get_window_titles () {
     local +x IFS=$'\n'
-    for WIN in $(dawin list-apps); do
-      local +x ID="$(echo "$WIN" | cut -d' ' -f1)"
-      local +x TITLE="$(echo "$WIN" | cut -d' ' -f2)"
+    for WIN in $(dawin list-desktop-entrys); do
+      local +x ID="$(echo $WIN | cut -d' ' -f1)"
+      local +x DESKTOP="$(echo $WIN | cut -d' ' -f2)"
+
+      local +x TITLE="$(desktop-to-title "$DESKTOP")"
       local +x STATE="$(xprop -id "$ID" _NET_WM_STATE || :)"
 
       if [[ "$STATE" == *"_NET_WM_STATE_ABOVE"* ]] ; then

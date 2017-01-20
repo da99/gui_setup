@@ -1,0 +1,18 @@
+[Desktop Entry]
+Name=/Play
+Name[en_AU]=Computer
+Name[en_CA]=Computer
+Name[en_GB]=Computer
+Comment=Browse /play
+Comment[en_AU]=Browse /play
+Comment[en_CA]=Browse /play
+Comment[en_GB]=Browse /play
+TryExec=caja
+Exec=caja --no-desktop /play
+Icon=computer
+Terminal=false
+StartupNotify=true
+Type=Application
+Categories=GTK;System;Core;
+Keywords=browse;disks;folders;local;computer
+NoDisplay=true

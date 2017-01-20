@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Neovim
+GenericName=Neovim
+Comment=Edit files.
+Exec=/usr/bin/nvim %U
+TryExec=/usr/bin/nvim
+Icon=nvim
+Terminal=true
+Type=Application
+Categories=Development;TextEditor;
+Keywords=Text;Editor;
+StartupNotify=false

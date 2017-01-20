@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=GMRun
+GenericName=run-command
+Comment=Run and excute commands.
+Exec=/usr/bin/gmrun
+TryExec=/usr/bin/gmrun
+Icon=gtk-execute
+Terminal=false
+Type=Application
+Categories=Utility;
+Path=
+StartupNotify=false
