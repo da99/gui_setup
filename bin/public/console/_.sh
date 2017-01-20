@@ -39,6 +39,7 @@ console () {
   cache_setup ensure-setup
 
   local +x DCOLOR="#8f8f8f"
+  local +x ALERT_COLOR="#f1f442"
 
   # === Media:
   get_media_line () {
@@ -93,13 +94,19 @@ console () {
         TITLE="*$TITLE"
       fi
 
-      if [[ "$STATE" == *"_NET_WM_STATE_HIDDEN"* ]] ; then
-        TITLE="%{F$DCOLOR}$TITLE%{F-}"
-        TITLE="%{A:unhide $ID:}$TITLE%{A}"
-      else
-        TITLE="%{A:hide $ID:}$TITLE%{A}"
-      fi
-
+      case "$STATE" in
+        *"_NET_WM_STATE_DEMANDS_ATTENTION"*)
+          TITLE="%{F${ALERT_COLOR}}$TITLE%{F-}"
+          TITLE="%{A:unhide $ID:}$TITLE%{A}"
+          ;;
+        *"_NET_WM_STATE_HIDDEN"*)
+          TITLE="%{F$DCOLOR}$TITLE%{F-}"
+          TITLE="%{A:unhide $ID:}$TITLE%{A}"
+          ;;
+        *)
+          TITLE="%{A:hide $ID:}$TITLE%{A}"
+          ;;
+      esac
       echo -n " $TITLE "
     done
     echo ""
