@@ -1,9 +1,15 @@
 
-
-
+source "$THIS_DIR/bin/public/icy-title/_.sh"
 
 # === {{CMD}}
 console () {
+  local +x KEEP_RUNNING="/tmp/gui-console-keep-running"
+
+  if [[ "$@" == "exit" ]]; then
+    rm -f "$KEEP_RUNNING"
+    killall lemonbar || :
+    return $?
+  fi
 
   # sleep 2
   PATH="$PATH:$THIS_DIR/../sh_string/bin"
@@ -45,19 +51,21 @@ console () {
   get_media_line () {
     local +x MIN="$(date '+%M')"
 
-    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get channel99-title)
-    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get channel101-title)
-    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get lotdg-title)
-    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get q77-title)
-    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get asi-title)
+    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get icy-title "http://174.142.103.65:8060/;stream.nsv")
+    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get icy-title "http://46.166.162.26:8017/;stream.nsv")
+    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get icy-title "http://65.60.19.42:8380")
+    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get icy-title "http://98.168.140.157:8777/;stream.nsv")
+    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get icy-title "http://38.96.148.18:6490/;stream.nsv")
     echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
     echo ""
     #   # This are not working for now:
     #   # echo -n "%{r}$(get vlc-title)"
   }
 
+  touch "$KEEP_RUNNING"
+
   (
-    while true; do
+    while [[ -f "$KEEP_RUNNING" ]]; do
       get_media_line
       sleep 3
     done | lemonbar -b -p -n daMediaStatus
@@ -142,7 +150,7 @@ console () {
 
 
   # === Top bar:
-  while true ; do
+  while [[ -f "$KEEP_RUNNING" ]]; do
     get_line
   done | lemonbar -p -n daTopStatus | while true; do
     run_command
@@ -166,7 +174,7 @@ console () {
 } # === end function
 
 get () {
-  local +x FUNC="$1"; shift
+  local +x FUNC="$@"
   case "$FUNC" in
 
     vlc-*)
@@ -195,45 +203,6 @@ if-stale () {
       return 1
 			;;
 	esac
-}
-
-icy-title () {
-  local +x URL="$1"; shift
-
-
-  local +x TITLE="$((curl -H 'icy-metadata: 1' "$URL"  -s || echo "[down]") | head -c 34000 | grep --text -Pzo "(?s)(StreamTitle='\K(.*)(?=';Stream))|down|(4|5)\d\d Service \w" )"
-
-  case "$TITLE" in
-    *" Service "*)
-      echo "[down]"
-      ;;
-    "")
-      echo "[empty]"
-      ;;
-    *)
-      echo "$TITLE"
-      ;;
-  esac
-}
-
-asi-title () {
-  icy-title "http://38.96.148.18:6490/;stream.nsv"
-}
-
-q77-title () {
-  icy-title "http://98.168.140.157:8777/;stream.nsv"
-}
-
-channel101-title () {
-  icy-title "http://46.166.162.26:8017/;stream.nsv"
-}
-
-channel99-title () {
-  icy-title "http://174.142.103.65:8060/;stream.nsv"
-}
-
-lotdg-title () {
-  icy-title "http://65.60.19.42:8380"
 }
 
 nhk-title () {

@@ -372,42 +372,6 @@ case $action in
     fi
     ;;
 
-  "cache_the_machine")
-    # === cache_the_machine  # Set up a DB for (.desktop, icon, etc.) lookups.
-    if [[ ! -f "$DB_FILE" ]]; then
-      rm -f "$TMP_DB_FILE"
-      sqlite3 $TMP_DB_FILE "create table desktops ( \
-        id TEXT    PRIMARY KEY,                 \
-        path       TEXT,                        \
-        icon_name  TEXT,                        \
-        icon_path  TEXT,                        \
-        try_exec   TEXT,                        \
-        exec       TEXT,                        \
-        terminal   INT DEFAULT 0,               \
-        comment    TEXT                         \
-      );"
-
-      while read -r FILE; do
-        case "$(basename "$FILE" .desktop)" in
-          nemo-autorun-software)
-            continue
-            ;;
-          nemo-autostart)
-            continue
-            ;;
-          *)
-            echo -n "=== $FILE: "
-            sql_cmd="$($0 desktop_entry_to_insert desktops $FILE)"
-            { sqlite3 "$TMP_DB_FILE" "$sql_cmd"  2>&1 && echo "inserted"; } || \
-              echo "exit $? on $FILE"
-            ;;
-        esac
-      done < <($0 desktop_entries)
-
-      mv -i "$TMP_DB_FILE" "$DB_FILE"
-    fi
-    ;;
-
   "select")
     # === select partial_or_full_id # returns TAB-delimited cols, rows
     sqlite3 -separator $'\t' "$DB_FILE" "SELECT id, icon_path, exec, comment FROM desktops WHERE id LIKE '$1%' LIMIT 10;"
@@ -416,7 +380,6 @@ case $action in
   "normal_window_info")
     # === normal_window_info # Returns a TAB-delimited list: winid exec_name, pid, title
     normal_window_info $@
-
 
     ;;
 
