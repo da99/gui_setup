@@ -42,7 +42,7 @@ console () {
     exit 1
   fi
 
-  cache_setup ensure-setup
+  cache_setup ensure
 
   local +x DCOLOR="#8f8f8f"
   local +x ALERT_COLOR="#f1f442"
