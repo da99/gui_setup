@@ -255,7 +255,7 @@ move_to () {
 
 case $action in
   help|--help)
-    mksh_setup print-help $0
+    "$THIS_DIR"/../mksh_setup/bin/mksh_setup print-help $0 $@
     ;;
 
   "desktop_entries")
