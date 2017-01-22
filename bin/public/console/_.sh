@@ -1,5 +1,6 @@
 
 source "$THIS_DIR/bin/public/icy-title/_.sh"
+source "$THIS_DIR/../dawin/bin/public/window-entry-to-title/_.sh"
 
 # === {{CMD}}
 console () {
@@ -71,31 +72,12 @@ console () {
     done | lemonbar -b -p -n daMediaStatus
   ) &
 
-  desktop-to-title () {
-    local +x FILE="$1"; shift
-
-    if [[ -z "$FILE" ]]; then
-      echo "[unknown]"
-      return 0
-    fi
-
-    local +x KEY="$(basename "$FILE" .desktop)"
-    local +x TITLE="$(cache_setup read-or-empty "$KEY")"
-    if [[ -z "$TITLE" ]]; then
-      local +x TITLE="$(grep "Name=" "$FILE" | head -n 1 | cut -d'=' -f2-)"
-      cache_setup write "$KEY" "$TITLE"
-    fi
-    echo "$TITLE"
-  }
-
   # === Top bar:
-  get_window_titles () {
+  get-window-titles () {
     local +x IFS=$'\n'
-    for WIN in $(dawin list-desktop-entrys); do
+    for WIN in $(dawin list-windows); do
       local +x ID="$(echo $WIN | cut -d' ' -f1)"
-      local +x DESKTOP="$(echo $WIN | cut -d' ' -f2)"
-
-      local +x TITLE="$(desktop-to-title "$DESKTOP")"
+      local +x TITLE="$(window-entry-to-title "$WIN")"
       local +x STATE="$(xprop -id "$ID" _NET_WM_STATE || :)"
 
       if [[ "$STATE" == *"_NET_WM_STATE_ABOVE"* ]] ; then
@@ -120,8 +102,8 @@ console () {
     echo ""
   }
 
-  get_line () {
-    echo "  "$(date "+%a %b %d, %r")"   $(get_window_titles)"
+  get-line () {
+    echo "  "$(date "+%a %b %d, %r")"   $(get-window-titles)"
     # echo -n '%{r}'
     # {
     #   paradise internet-activity | awk '{if (NR == 1) printf "%s",$0; else printf "  %s  ",$0;}';
@@ -151,7 +133,7 @@ console () {
 
   # === Top bar:
   while [[ -f "$KEEP_RUNNING" ]]; do
-    get_line
+    get-line
   done | lemonbar -p -n daTopStatus | while true; do
     run_command
   done
