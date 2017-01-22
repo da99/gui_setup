@@ -16,6 +16,7 @@ console () {
   PATH="$PATH:$THIS_DIR/../sh_string/bin"
   PATH="$PATH:$THIS_DIR/../dawin/bin"
   PATH="$PATH:$THIS_DIR/../cache_setup/bin"
+  PATH="$PATH:$THIS_DIR/../process/bin"
   # PATH="$PATH:$THIS_DIR/../paradise/bin"
 
   echo "PID: $$"
@@ -103,14 +104,14 @@ console () {
   }
 
   get-line () {
-    echo "  "$(date "+%a %b %d, %r")"   $(get-window-titles)"
+    echo "  $(date "+%a %b %d, %r")   $(get-window-titles) %{r}$(process volume graph)   "
     # echo -n '%{r}'
     # {
     #   paradise internet-activity | awk '{if (NR == 1) printf "%s",$0; else printf "  %s  ",$0;}';
     # } || echo -n '[unknown internet activity]'
 
     # # echo -n "CPU: $(process cpu-usage | tr '\n' ' ')  "
-    # echo "$(paradise volume graph)   "
+    # echo ""
     # # No sleep necessary because 'paradise internet-activity' sleeps.
   }
 
@@ -138,19 +139,6 @@ console () {
     run_command
   done
   return 0
-
-  # while read -r CMD ; do
-  #   case "$CMD" in
-  #     "0x"*)
-  #       local +x ID="$CMD"
-  #       echo "=== focusing: $ID" >&2
-  #       wmctrl -i -a "$ID" || echo "=== error: $ID" >&2
-  #       ;;
-  #     *)
-  #       echo "=== Ignoring: $CMD" >&2
-  #       ;;
-  #   esac
-  # done
 
 
 } # === end function
