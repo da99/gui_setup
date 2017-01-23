@@ -102,9 +102,8 @@ console () {
       case "$FULL $STATE" in
         *'"file_progress", "Caja"'*|*"_NET_WM_STATE_DEMANDS_ATTENTION"*|*"_NET_WM_STATE_MODAL"*|*"_NET_WM_WINDOW_TYPE_DIALOG"*)
           META="$META| $TITLE = ALERT |"
-          if [[ "$FINAL_LIST" == *"$ID $TITLE"* ]]; then
-            continue
-          fi
+          FINAL_LIST="$ID $TITLE\n${FINAL_LIST}"
+          continue
           ;;
         *"_NET_WM_STATE_HIDDEN"*)
           META="$META| $TITLE = HIDDEN |"
