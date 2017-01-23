@@ -70,36 +70,86 @@ console () {
     while [[ -f "$KEEP_RUNNING" ]]; do
       get_media_line
       sleep 3
-    done | lemonbar -b -p -n daMediaStatus
+    done | lemonbar -b -p -n daBar_Media
   ) &
 
   # === Top bar:
   get-window-titles () {
     local +x IFS=$'\n'
-    for WIN in $(dawin list-windows); do
-      local +x ID="$(echo $WIN | cut -d' ' -f1)"
-      local +x TITLE="$(window-entry-to-title "$WIN")"
-      local +x STATE="$(xprop -id "$ID" _NET_WM_STATE || :)"
+    local +x META=""
+    local +x WINDOWS="$(dawin list-windows)"
 
-      if [[ "$STATE" == *"_NET_WM_STATE_ABOVE"* ]] ; then
-        TITLE="*$TITLE"
+    local +x FINAL_LIST=""
+
+    for WIN in $WINDOWS; do
+      IFS=$' \t\n'
+      set $WIN
+      IFS=$'\n'
+
+      local +x FULL="$8"
+      local +x ID="${WIN%% *}"
+      local +x TITLE="$(window-entry-to-title "$WIN")"
+      local +x STATE="$(xprop -id "$ID" WM_CLASS _NET_WM_STATE _NET_WM_WINDOW_TYPE 2>/dev/null || :)"
+
+      if [[ -z "$STATE" ]]; then # window has been closed.
+        continue
       fi
 
-      case "$STATE" in
-        *"_NET_WM_STATE_DEMANDS_ATTENTION"*)
-          TITLE="%{F${ALERT_COLOR}}$TITLE%{F-}"
-          TITLE="%{A:unhide $ID:}$TITLE%{A}"
+      if [[ "$STATE" == *"_NET_WM_STATE_ABOVE"* ]] ; then
+        META="$META| $TITLE = ABOVE |"
+      fi
+
+      case "$FULL $STATE" in
+        *'"file_progress", "Caja"'*|*"_NET_WM_STATE_DEMANDS_ATTENTION"*|*"_NET_WM_STATE_MODAL"*|*"_NET_WM_WINDOW_TYPE_DIALOG"*)
+          META="$META| $TITLE = ALERT |"
+          if [[ "$FINAL_LIST" == *"$ID $TITLE"* ]]; then
+            continue
+          fi
           ;;
         *"_NET_WM_STATE_HIDDEN"*)
-          TITLE="%{F$DCOLOR}$TITLE%{F-}"
-          TITLE="%{A:unhide $ID:}$TITLE%{A}"
-          ;;
-        *)
-          TITLE="%{A:hide $ID:}$TITLE%{A}"
+          META="$META| $TITLE = HIDDEN |"
           ;;
       esac
-      echo -n " $TITLE "
-    done
+
+      FINAL_LIST="$FINAL_LIST\n$ID $TITLE"
+    done # === for WIN
+
+    local +x DONE=""
+
+    for WIN in $(echo -e "$FINAL_LIST"); do
+      IFS=$' \t\n'
+      set $WIN
+      IFS=$'\n'
+      local +x ID="$1"
+      local +x TITLE="$2"
+      local +x FINAL="$TITLE"
+
+      if [[ "$DONE" == *" $TITLE = DONE "* ]]; then
+        continue
+      fi
+
+      if [[ "$META" == *" $TITLE = ABOVE "* ]]; then
+        FINAL="*$FINAL"
+      fi
+
+      case "$META" in
+        *" $TITLE = ALERT "*)
+          FINAL="%{F${ALERT_COLOR}}$FINAL%{F-}"
+          FINAL="%{A:unhide $ID:}$FINAL%{A}"
+          ;;
+        *" $TITLE = HIDDEN "*)
+          FINAL="%{F$DCOLOR}$FINAL%{F-}"
+          FINAL="%{A:unhide $ID:}$FINAL%{A}"
+          ;;
+        *)
+          FINAL="%{A:hide $ID:}$FINAL%{A}"
+          ;;
+      esac
+
+      echo -n " $FINAL "
+      DONE="$DONE| $TITLE = DONE |"
+    done # === for WIN
+
     echo ""
   }
 
@@ -135,7 +185,7 @@ console () {
   # === Top bar:
   while [[ -f "$KEEP_RUNNING" ]]; do
     get-line
-  done | lemonbar -p -n daTopStatus | while true; do
+  done | lemonbar -p -n daBar_Top | while true; do
     run_command
   done
   return 0
@@ -152,7 +202,7 @@ get () {
       ;;
 
     *)
-      local +x TITLE="$($FUNC | sh_string summarize 30 || :)"
+      local +x TITLE="$($FUNC | sh_string summarize 40 || :)"
       if [[ -z "$TITLE" ]]; then
         echo -n "[error]"
       else
