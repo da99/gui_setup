@@ -4,12 +4,13 @@
 set -u -e -o pipefail
 
 action=$1
+shift
+
 temp="$(dirname $(dirname $(realpath $0)))/tmp"
 THIS_DIR="$(dirname "$(dirname "$0")")"
 THIS_TMP="${THIS_DIR}/tmp"
 DB_FILE="${THIS_TMP}/db.desktop.db"
 TMP_DB_FILE="/tmp/gui_setup.db.desktop.db"
-shift
 
 list_motions () {
   cat $0 | grep '# ''win_cycle' | tr -d ' ' | cut -d')' -f1

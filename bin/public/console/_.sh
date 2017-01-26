@@ -33,16 +33,6 @@ console () {
     exit 1
   fi
 
-  if ! type curl &>/dev/null; then
-    echo "!!! Install curl." >&2
-    exit 1
-  fi
-
-  if ! type lynx &>/dev/null; then
-    echo "!!! Install lynx."
-    exit 1
-  fi
-
   cache_setup ensure
 
   local +x DCOLOR="#8f8f8f"
@@ -52,12 +42,13 @@ console () {
   get_media_line () {
     local +x MIN="$(date '+%M')"
 
-    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get icy-title channel-99)
-    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get icy-title channel-101)
-    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get icy-title lotdg)
-    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get icy-title q77)
-    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get icy-title asi)
-    echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
+    local +x IFS=$'\n'
+    for LINE in $(cat ../cache_setup/progs/media-titles.txt || :); do
+      local +x NAME="$(echo "$LINE" | cut -d'|' -f1)"
+      local +x TITLE="$(echo "$LINE" | cut -d'|' -f3 | sh_string summarize 40)"
+      echo  -n "  "%{F$DCOLOR}$NAME:%{F-} $TITLE
+    done
+
     echo ""
     #   # This are not working for now:
     #   # echo -n "%{r}$(get vlc-title)"
@@ -223,30 +214,6 @@ if-stale () {
 	esac
 }
 
-icy-title () {
-  "$THIS_DIR/../media_setup/bin/media_setup" title $@
-}
 
-nhk-title () {
-  local +x URL="https://api.nhk.or.jp/nhkworld/epg/v6/world/now.json?apikey=EJfK8jdS57GqlupFgAfAAwr573q01y6k"
 
-  local +x JSON="$( { curl --ssl -s "$URL" | gzip -d -c 2>/dev/null; } || curl --ssl -s "$URL" )"
-
-  if [[ -z "$JSON" ]]; then
-    return 1
-  fi
-
-  local +x NHK_TITLE="$( echo "$JSON" |  python -c "import sys, json; sys.stdout.write( json.load(sys.stdin)['channel']['item'][0]['title'] )"  || :)"
-
-  if [[ -z "$NHK_TITLE" ]]; then
-    return 1
-  fi
-
-  if [[ "$NHK_TITLE" != "NHK NEWSLINE" ]]; then
-    echo $NHK_TITLE
-    return 0
-  fi
-
-  echo "[NEXT] $( echo "$JSON" |  python -c "import sys, json; sys.stdout.write( json.load(sys.stdin)['channel']['item'][1]['title'] )" )"
-}
 
