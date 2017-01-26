@@ -1,5 +1,4 @@
 
-source "$THIS_DIR/bin/public/icy-title/_.sh"
 source "$THIS_DIR/../dawin/bin/public/window-entry-to-title/_.sh"
 
 # === {{CMD}}
@@ -53,11 +52,11 @@ console () {
   get_media_line () {
     local +x MIN="$(date '+%M')"
 
-    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get icy-title "http://174.142.103.65:8060/;stream.nsv")
-    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get icy-title "http://46.166.162.26:8017/;stream.nsv")
-    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get icy-title "http://65.60.19.42:8380")
-    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get icy-title "http://98.168.140.157:8777/;stream.nsv")
-    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get icy-title "http://38.96.148.18:6490/;stream.nsv")
+    echo  -n "  "%{F$DCOLOR}C99:%{F-}    $(get icy-title channel-99)
+    echo  -n "  "%{F$DCOLOR}C101:%{F-}   $(get icy-title channel-101)
+    echo  -n "  "%{F$DCOLOR}LOTDG:%{F-}  $(get icy-title lotdg)
+    echo  -n "  "%{F$DCOLOR}Q77:%{F-}    $(get icy-title q77)
+    echo  -n "  "%{F$DCOLOR}ASI:%{F-}    $(get icy-title asi)
     echo  -n "  "%{F$DCOLOR}NHK:%{F-}    $(get nhk-title)
     echo ""
     #   # This are not working for now:
@@ -222,6 +221,10 @@ if-stale () {
       return 1
 			;;
 	esac
+}
+
+icy-title () {
+  "$THIS_DIR/../media_setup/bin/media_setup" title $@
 }
 
 nhk-title () {
