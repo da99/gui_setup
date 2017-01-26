@@ -45,8 +45,8 @@ console () {
     local +x IFS=$'\n'
     for LINE in $(cat ../cache_setup/progs/media-titles.txt || :); do
       local +x NAME="$(echo "$LINE" | cut -d'|' -f1)"
-      local +x TITLE="$(echo "$LINE" | cut -d'|' -f3 | sh_string summarize 40)"
-      echo  -n "  "%{F$DCOLOR}$NAME:%{F-} $TITLE
+      local +x TITLE="$(echo "$LINE" | cut -d'|' -f3 | sh_string summarize 35)"
+      echo -n "  "%{F$DCOLOR}${NAME/channel-/c-}:%{F-}$TITLE
     done
 
     echo ""
