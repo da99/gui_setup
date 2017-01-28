@@ -2,6 +2,7 @@
 source "$THIS_DIR/../dawin/bin/public/window-entry-to-title/_.sh"
 
 # === {{CMD}}
+# === {{CMD}} exit
 console () {
   local +x KEEP_RUNNING="/tmp/gui-console-keep-running"
 
@@ -11,11 +12,17 @@ console () {
     return $?
   fi
 
+  if [[ "$(pgrep -f "$0 console" | wc -l)" -gt "2" ]]; then
+    echo "=== Already running: "$(pgrep -f "$0 console") >&2
+    return 0
+  fi
+
   # sleep 2
   PATH="$PATH:$THIS_DIR/../sh_string/bin"
   PATH="$PATH:$THIS_DIR/../dawin/bin"
   PATH="$PATH:$THIS_DIR/../cache_setup/bin"
   PATH="$PATH:$THIS_DIR/../process/bin"
+  PATH="$PATH:$THIS_DIR/../media_setup/bin"
   # PATH="$PATH:$THIS_DIR/../paradise/bin"
 
   echo "PID: $$"
@@ -43,10 +50,10 @@ console () {
     local +x MIN="$(date '+%M')"
 
     local +x IFS=$'\n'
-    for LINE in $(cat ../cache_setup/progs/media-titles.txt || :); do
-      local +x NAME="$(echo "$LINE" | cut -d'|' -f1)"
-      local +x TITLE="$(echo "$LINE" | cut -d'|' -f3 | sh_string summarize 35)"
-      echo -n "  "%{F$DCOLOR}${NAME/channel-/c-}:%{F-}$TITLE
+    for NAME in $(media_setup get basename --all); do
+      local +x SHORT_NAME="${NAME#*-}"
+      local +x TITLE="$(media_setup cache get title "$SHORT_NAME" | sh_string summarize 35)"
+      echo -n "  "%{F$DCOLOR}${SHORT_NAME}:%{F-}$TITLE
     done
 
     echo ""
