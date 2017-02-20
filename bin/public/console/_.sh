@@ -35,11 +35,6 @@ console () {
     exit 1
   fi
 
-  if ! type dawin &>/dev/null ; then
-    echo "!!! Install dawin." >&2
-    exit 1
-  fi
-
   cache_setup ensure
 
   local +x DCOLOR="#8f8f8f"
