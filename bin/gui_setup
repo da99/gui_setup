@@ -7,10 +7,12 @@ action=$1
 shift
 
 temp="$(dirname $(dirname $(realpath $0)))/tmp"
-THIS_DIR="$(dirname "$(dirname "$0")")"
+THIS_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
 THIS_TMP="${THIS_DIR}/tmp"
 DB_FILE="${THIS_TMP}/db.desktop.db"
 TMP_DB_FILE="/tmp/gui_setup.db.desktop.db"
+PATH="$PATH:$THIS_DIR/../mksh_setup/bin"
+PATH="$PATH:$THIS_DIR/../my_bash/bin"
 
 list_motions () {
   cat $0 | grep '# ''win_cycle' | tr -d ' ' | cut -d')' -f1
@@ -602,8 +604,8 @@ case $action in
     ;;
 
   "install")
-    bash_setup make_link $THIS_DIR/special_dots/terminalrc                   ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/terminal/terminalrc
-    bash_setup make_link $THIS_DIR/special_dots/xfce4-keyboard-shortcuts.xml ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml 
+    my_bash link $THIS_DIR/special_dots/terminalrc                   ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/terminal/terminalrc
+    my_bash link $THIS_DIR/special_dots/xfce4-keyboard-shortcuts.xml ${XDG_CONFIG_HOME:-$HOME/.config}/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml 
 
     # content="$(sudo cat /etc/sudoers | grep "systemctrl reboot" || echo "")"
     # if [[ -z "$content" ]]; then
