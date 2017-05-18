@@ -22,7 +22,7 @@ console () {
   PATH="$PATH:$THIS_DIR/../dawin/bin"
   PATH="$PATH:$THIS_DIR/../cache_setup/bin"
   PATH="$PATH:$THIS_DIR/../process/bin"
-  PATH="$PATH:$THIS_DIR/../media_setup/bin"
+  PATH="$PATH:$THIS_DIR/../my_media/bin"
   # PATH="$PATH:$THIS_DIR/../paradise/bin"
 
   echo "PID: $$"
@@ -45,9 +45,9 @@ console () {
     local +x MIN="$(date '+%M')"
 
     local +x IFS=$'\n'
-    for NAME in $(media_setup get basename --all); do
+    for NAME in $(my_media get basename --all); do
       local +x SHORT_NAME="${NAME#*-}"
-      local +x TITLE="$(media_setup cache get title "$SHORT_NAME" | sh_string summarize 35)"
+      local +x TITLE="$(my_media cache get title "$SHORT_NAME" | sh_string summarize 35)"
       echo -n "  "%{F$DCOLOR}${SHORT_NAME}:%{F-}$TITLE
     done
 
